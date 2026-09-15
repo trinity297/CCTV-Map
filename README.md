@@ -1,1 +1,180 @@
-# CCTV-Map
+# CCTV Map
+
+A log of every CCTV enquiry you make, on a map, searchable by **place** and by
+**time** — so that when someone asks "has anyone already got footage of the
+High Street on the 12th?", there is an answer.
+
+It exists to fix one specific problem: a digital evidence system tells you what
+*you* collected, but not what a colleague collected two streets away last week.
+So the same shop gets visited three times, and footage that would have answered
+your question quietly overwrites itself.
+
+---
+
+## What you record
+
+For each CCTV enquiry:
+
+| | |
+|---|---|
+| **Where it came from** | Premises name, address, postcode, and a pin on the map |
+| **When you collected it** | Date and time of the visit, and who made it |
+| **What period the footage covers** | Footage from → to (this is the bit that makes it searchable) |
+| **Which way each camera looks** | Per camera: a bearing, a field of view, how far it usefully sees, and what it covers |
+| **The system** | Type, retention period, quality, media format |
+| **References** | Occurrence/crime reference, operation, exhibit reference, where the media is now stored |
+| **Outcome** | Obtained, requested, viewed only, no footage, system not working, refused, no reply, or still to do |
+
+The direction of view matters more than it looks. It is the difference between
+"there is a camera near your scene" and "there is a camera *pointing at* your
+scene".
+
+## The three screens
+
+**Map** — every enquiry as a pin, coloured by outcome, with a shaded cone
+showing what each camera can see. A 360° camera draws as a full circle.
+
+**List** — the same records as a table, filterable, exportable to CSV (opens
+cleanly in Excel) or JSON.
+
+**Check before you go** — the one that saves the legwork. Drop a pin where your
+enquiry is, set a radius and the period you need, and it lists everything
+already on file that covers that place and time. Records whose cameras actually
+point at your spot are marked and sorted to the top. If it comes back empty,
+you know the enquiry is genuinely outstanding.
+
+Searching by date matches any footage that **overlaps** your window, not just
+footage wholly inside it — a camera recording 06:00–22:00 will be found when
+you ask about 19:00–20:00.
+
+The app also works out when the original will have overwritten itself, from the
+retention period you recorded, and says so: *"Original still on the system for
+roughly 9 more days"*, or *"would have been overwritten around 9 April — this
+log may be the only surviving record that it existed."*
+
+---
+
+## Running it
+
+You need [Node.js](https://nodejs.org) 22.13 or newer. Nothing else — there are
+no dependencies to install.
+
+```bash
+node server.js
+```
+
+Then open <http://127.0.0.1:4173>.
+
+To load six worked examples so you can see how it hangs together:
+
+```bash
+npm run seed
+```
+
+They are all tagged with the operation `DEMO`. Filter on that and delete them
+when you have finished looking, or run `npm run seed` again to reset them.
+
+### Settings
+
+All optional, set as environment variables:
+
+| Variable | Default | What it does |
+|---|---|---|
+| `PORT` | `4173` | Port to listen on |
+| `HOST` | `127.0.0.1` | Interface to bind. `127.0.0.1` means *this machine only* |
+| `CCTV_MAP_DB` | `./data/cctv-map.db` | Where the database file lives |
+| `CCTV_MAP_PASSCODE` | *(unset)* | If set, a shared passcode is required to use the app |
+| `CCTV_MAP_SECRET` | random | Signing key for session cookies. Set it to a long random string if you want sign-ins to survive a restart |
+
+For example, to share it on a local network with a passcode:
+
+```bash
+HOST=0.0.0.0 CCTV_MAP_PASSCODE='pick-something-long' CCTV_MAP_SECRET='a-long-random-string' node server.js
+```
+
+### Where the data lives
+
+One SQLite file, `data/cctv-map.db`. Back it up by copying it. Move it to
+another machine by copying it. It is not in version control — see
+`.gitignore`.
+
+---
+
+## Please read this before putting real case data in it
+
+This is a working tool, not an accredited evidence system, and it was built
+outside any force procurement or information-assurance process. Some things you
+should weigh up first:
+
+- **There is no per-user login.** The optional passcode is shared, and the "You"
+  box in the corner is a name people type themselves — it identifies who made a
+  change in the audit trail, but it does not authenticate anyone.
+- **Nothing is encrypted at rest.** The database is a plain file. Anyone with
+  access to the machine or a backup of it can read it.
+- **Traffic is unencrypted** unless you put it behind a reverse proxy with TLS.
+  Do not run it with `HOST=0.0.0.0` on an untrusted network without one.
+- **It records intelligence about premises and people** — addresses, contact
+  names, phone numbers. That engages data protection obligations, and in a
+  policing context likely a DPIA and your force's information security team.
+- **It is not a disclosure record and not an exhibit management system.** Treat
+  it as an index that points at where the real material is held, and keep the
+  authoritative copy in whatever system your force mandates.
+
+The honest summary: excellent for your own casework on your own machine, and
+for a small team on a properly secured internal server — but get it signed off
+before it holds live operational data for a whole department.
+
+Map tiles come from OpenStreetMap, which means the browser asks openstreetmap.org
+for the tiles it draws. It does **not** send any of your records — just the map
+squares being looked at. If your network blocks it, the app says so and carries
+on working; only the background imagery is lost. Leaflet itself is bundled in
+`public/vendor/`, so the app needs no internet access to start.
+
+---
+
+## Development
+
+```bash
+npm test          # 44 tests, no dependencies
+npm run dev       # restarts on change
+```
+
+```
+server.js              entry point
+src/
+  db.js                schema
+  records.js           validation, search, and the coverage query
+  geo.js               distance, bearings, field-of-view maths
+  api.js               JSON API
+  app.js               request handler (shared by server and tests)
+  auth.js              optional shared passcode
+  csv.js               export
+  http.js              small HTTP helpers
+public/
+  index.html           app shell
+  css/app.css          styles, light and dark
+  js/                  map, form, compass dial, list, detail, coverage
+  vendor/leaflet/      Leaflet 1.9.4 (BSD-2-Clause), bundled
+test/                  geo, records, api, auth
+scripts/seed.js        example data
+```
+
+### API
+
+All endpoints return JSON. `GET` endpoints take the same filter parameters:
+`q`, `status` (repeatable), `from`, `to`, `reference`, `operation`, `bbox`,
+`mapped`, `limit`, `offset`.
+
+```
+GET    /api/records            list and filter
+POST   /api/records            create
+GET    /api/records/:id        read
+PUT    /api/records/:id        update
+DELETE /api/records/:id        delete
+GET    /api/records/:id/history
+POST   /api/coverage           { lat, lng, radius_m, from, to }
+GET    /api/meta               statuses, system types, counts
+GET    /api/export.csv         filtered export
+GET    /api/export.json        filtered export
+GET/POST/DELETE /api/session   passcode sign-in, when enabled
+```
