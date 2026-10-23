@@ -121,6 +121,20 @@ For example, to share it on a local network with a passcode:
 HOST=0.0.0.0 CCTV_MAP_PASSCODE='pick-something-long' CCTV_MAP_SECRET='a-long-random-string' node server.js
 ```
 
+### Checking your setup
+
+```bash
+npm run check
+```
+
+Reads your `.env` exactly as the server does, then fetches one real map tile to
+prove the key works. It reports the length of your key but never its value, so
+the output is safe to share when asking for help.
+
+It catches the usual culprits: a file Notepad saved as `.env.txt` rather than
+`.env`, the project *secret* pasted where the *API key* belongs, a key with a
+stray space or quote in it, and a Data Hub project with the wrong API added.
+
 ### Map background
 
 The pins, the view cones and the coverage check are all computed locally — the
@@ -233,6 +247,7 @@ before it holds live operational data for a whole department.
 
 ```bash
 npm test          # 54 tests, no dependencies
+npm run check     # verify configuration and the map key
 npm run dev       # restarts on change
 ```
 
@@ -255,7 +270,9 @@ public/
   js/                  map, form, compass dial, list, detail, coverage
   vendor/leaflet/      Leaflet 1.9.4 (BSD-2-Clause), bundled
 test/                  geo, records, api, auth
-scripts/seed.js        example data
+scripts/
+  seed.js              example data
+  check-setup.js       configuration diagnostic
 ```
 
 ### API
