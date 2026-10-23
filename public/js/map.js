@@ -1,10 +1,27 @@
 import { el } from './util.js';
 
-const TILES = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
-const TILE_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
 const EARTH_RADIUS_M = 6371008.8;
 const DEFAULT_CENTRE = [54.0, -2.2]; // roughly the middle of the UK
 const VIEW_KEY = 'cctvmap.view';
+
+/**
+ * Tile settings come from the server (see src/map-config.js) so the imagery
+ * source can be changed without touching the front end. An empty url means
+ * "no background map" - the pins and view cones still draw.
+ */
+function tileConfig() {
+  return window.__cctvMeta?.map || { url: '', attribution: '', maxZoom: 19, subdomains: 'abc' };
+}
+
+function addTileLayer(map) {
+  const config = tileConfig();
+  if (!config.url) return null;
+  return L.tileLayer(config.url, {
+    maxZoom: config.maxZoom || 19,
+    subdomains: config.subdomains || 'abc',
+    attribution: config.attribution || '',
+  }).addTo(map);
+}
 
 const toRad = (d) => (d * Math.PI) / 180;
 const toDeg = (r) => (r * 180) / Math.PI;
@@ -54,17 +71,18 @@ export function createMapView({ container, onSelect, onMapClick, onViewportChang
   } catch { /* ignore */ }
   map.setView(saved?.centre || DEFAULT_CENTRE, saved?.zoom ?? (saved ? 15 : 6));
 
-  const tiles = L.tileLayer(TILES, { maxZoom: 19, attribution: TILE_ATTRIBUTION });
-  let tileErrors = 0;
-  tiles.on('tileerror', () => {
-    tileErrors += 1;
-    if (tileErrors === 4) document.querySelector('#map-offline')?.removeAttribute('hidden');
-  });
-  tiles.on('tileload', () => {
-    tileErrors = 0;
-    document.querySelector('#map-offline')?.setAttribute('hidden', '');
-  });
-  tiles.addTo(map);
+  const tiles = addTileLayer(map);
+  if (tiles) {
+    let tileErrors = 0;
+    tiles.on('tileerror', () => {
+      tileErrors += 1;
+      if (tileErrors === 4) document.querySelector('#map-offline')?.removeAttribute('hidden');
+    });
+    tiles.on('tileload', () => {
+      tileErrors = 0;
+      document.querySelector('#map-offline')?.setAttribute('hidden', '');
+    });
+  }
 
   const coneLayer = L.layerGroup().addTo(map);
   const markerLayer = L.layerGroup().addTo(map);
@@ -224,7 +242,7 @@ export function createMapView({ container, onSelect, onMapClick, onViewportChang
  */
 export function createPickerMap(container, initial, onChange) {
   const map = L.map(container, { zoomControl: true, attributionControl: false });
-  L.tileLayer(TILES, { maxZoom: 19 }).addTo(map);
+  addTileLayer(map);
 
   // A divIcon rather than Leaflet's default marker: it matches the pins on the
   // main map, and keeps the app free of binary image assets.

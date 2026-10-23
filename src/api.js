@@ -32,7 +32,7 @@ function parseListQuery(url) {
  * Returns a handler for /api/*, or null when the path is not ours.
  * Resolves to `true` once it has written a response.
  */
-export function createApi({ db, auth }) {
+export function createApi({ db, auth, mapConfig }) {
   const store = new RecordStore(db);
 
   async function handle(req, res, url) {
@@ -66,10 +66,13 @@ export function createApi({ db, auth }) {
 
     // --- reference data ----------------------------------------------------
     if (path === '/api/meta' && method === 'GET') {
+      // `warnings` are for the operator's console, not the browser.
+      const { warnings, ...map } = mapConfig;
       return sendJson(res, 200, {
         statuses: STATUSES,
         systemTypes: SYSTEM_TYPES,
         stats: store.stats(),
+        map,
       });
     }
 

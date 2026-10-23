@@ -4,6 +4,7 @@ import { dirname, join, resolve } from 'node:path';
 import { openDatabase } from './src/db.js';
 import { createAuth } from './src/auth.js';
 import { createRequestHandler } from './src/app.js';
+import { resolveMapConfig } from './src/map-config.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 
@@ -17,7 +18,9 @@ const auth = createAuth({
   secret: process.env.CCTV_MAP_SECRET,
 });
 
-const server = createServer(createRequestHandler({ db, auth }));
+const mapConfig = resolveMapConfig();
+
+const server = createServer(createRequestHandler({ db, auth, mapConfig }));
 
 server.listen(PORT, HOST, () => {
   const openness = auth.enabled
@@ -29,7 +32,12 @@ server.listen(PORT, HOST, () => {
   console.log(`  Open in a browser:  http://${HOST}:${PORT}`);
   console.log(`  Database file:      ${DB_FILE}`);
   console.log(`  Access:             ${openness}`);
+  console.log(`  Map background:     ${mapConfig.label}`);
   console.log('');
+  for (const warning of mapConfig.warnings) {
+    console.log(`  ! ${warning}`);
+    console.log('');
+  }
   console.log('  Press Ctrl+C to stop.');
   console.log('');
 });

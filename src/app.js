@@ -2,12 +2,18 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { createApi } from './api.js';
 import { serveStatic, sendText } from './http.js';
+import { resolveMapConfig } from './map-config.js';
 
 const PUBLIC_DIR = join(dirname(fileURLToPath(import.meta.url)), '..', 'public');
 
 /** Builds the single request handler used by both the server and the tests. */
-export function createRequestHandler({ db, auth, publicDir = PUBLIC_DIR }) {
-  const api = createApi({ db, auth });
+export function createRequestHandler({
+  db,
+  auth,
+  mapConfig = resolveMapConfig(),
+  publicDir = PUBLIC_DIR,
+}) {
+  const api = createApi({ db, auth, mapConfig });
 
   return async function handleRequest(req, res) {
     const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);

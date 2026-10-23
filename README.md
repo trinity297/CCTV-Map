@@ -85,12 +85,71 @@ All optional, set as environment variables:
 | `CCTV_MAP_DB` | `./data/cctv-map.db` | Where the database file lives |
 | `CCTV_MAP_PASSCODE` | *(unset)* | If set, a shared passcode is required to use the app |
 | `CCTV_MAP_SECRET` | random | Signing key for session cookies. Set it to a long random string if you want sign-ins to survive a restart |
+| `CCTV_MAP_TILES` | `carto-voyager` | Which map background to use — see below |
+| `CCTV_MAP_OS_API_KEY` | *(unset)* | Ordnance Survey Data Hub key. Setting it switches the map to OS mapping |
+| `CCTV_MAP_TILE_URL` | *(unset)* | A tile URL template of your own, e.g. a tile server inside your network. Overrides everything above |
+| `CCTV_MAP_TILE_ATTRIBUTION` | per provider | Attribution text shown in the corner of the map |
+| `CCTV_MAP_TILE_MAX_ZOOM` | per provider | How far the map will zoom in |
 
 For example, to share it on a local network with a passcode:
 
 ```bash
 HOST=0.0.0.0 CCTV_MAP_PASSCODE='pick-something-long' CCTV_MAP_SECRET='a-long-random-string' node server.js
 ```
+
+### Map background
+
+The pins, the view cones and the coverage check are all computed locally — the
+only thing the internet provides is the picture underneath them. Where that
+picture comes from is configurable, because it is a licensing question as much
+as a technical one.
+
+```bash
+CCTV_MAP_TILES=carto-positron node server.js
+```
+
+| Preset | What it is |
+|---|---|
+| `carto-voyager` *(default)* | CARTO's basemap built from OpenStreetMap data. Free to use with attribution, no sign-up |
+| `carto-positron` | The same, in a pale style that makes the coloured pins stand out |
+| `carto-dark` | Dark style |
+| `os-road`, `os-light`, `os-outdoor` | **Ordnance Survey.** Needs `CCTV_MAP_OS_API_KEY` |
+| `osm` | OpenStreetMap's own servers. Read the warning below before choosing this |
+| `none` | No background at all. Pins and cones on a plain backdrop — works with no internet access whatsoever |
+
+**If you are in a UK police force, use Ordnance Survey.** Forces have access
+through the Public Sector Geospatial Agreement, the licensing is already
+settled, and OS street and address detail is far better than anything else for
+UK work. Get a key from a project in the [OS Data Hub](https://osdatahub.os.uk)
+and:
+
+```bash
+CCTV_MAP_OS_API_KEY=your-key node server.js
+```
+
+Setting the key is enough — the map switches to OS automatically. Note the key
+ends up in the tile URLs the browser requests, which is how OS raster keys are
+designed to work, so restrict it to your host in the Data Hub rather than
+treating it as a secret.
+
+**About `osm`.** OpenStreetMap's tile servers run on donated hardware for the
+OSM project's own benefit, and their
+[usage policy](https://operations.osmfoundation.org/policies/tiles/) does not
+cover being an application's backend. They block traffic they cannot attribute
+to a known app, which is what a browser pointed at `127.0.0.1` looks like — if
+you see *"Access blocked: app is not following the tile usage policy"* on the
+map, that is what happened. The default was changed away from OSM for exactly
+this reason. Only choose `osm` for genuinely light personal use.
+
+Pointing it at a tile server inside your own network works too:
+
+```bash
+CCTV_MAP_TILE_URL='https://tiles.yourforce.internal/{z}/{x}/{y}.png' \
+CCTV_MAP_TILE_ATTRIBUTION='Force GIS team' node server.js
+```
+
+If tiles cannot be fetched for any reason the app says so and keeps working —
+only the background imagery is lost.
 
 ### Where the data lives
 
@@ -124,18 +183,20 @@ The honest summary: excellent for your own casework on your own machine, and
 for a small team on a properly secured internal server — but get it signed off
 before it holds live operational data for a whole department.
 
-Map tiles come from OpenStreetMap, which means the browser asks openstreetmap.org
-for the tiles it draws. It does **not** send any of your records — just the map
-squares being looked at. If your network blocks it, the app says so and carries
-on working; only the background imagery is lost. Leaflet itself is bundled in
-`public/vendor/`, so the app needs no internet access to start.
+- **The browser fetches map tiles from whichever provider you configure**, which
+  tells that provider which map squares are being looked at. It sends **none of
+  your records** — not the pins, not the addresses, not the times. Even so, the
+  pattern of areas being viewed is not nothing, which is another argument for
+  pointing `CCTV_MAP_TILE_URL` at something your force already runs, or using
+  `CCTV_MAP_TILES=none`. Leaflet itself is bundled in `public/vendor/`, so the
+  app needs no internet access to start.
 
 ---
 
 ## Development
 
 ```bash
-npm test          # 44 tests, no dependencies
+npm test          # 54 tests, no dependencies
 npm run dev       # restarts on change
 ```
 
@@ -148,6 +209,7 @@ src/
   api.js               JSON API
   app.js               request handler (shared by server and tests)
   auth.js              optional shared passcode
+  map-config.js        tile provider presets and resolution
   csv.js               export
   http.js              small HTTP helpers
 public/

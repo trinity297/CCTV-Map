@@ -54,11 +54,14 @@ test('static assets are served and directory traversal is refused', async () => 
   }
 });
 
-test('meta exposes statuses and system types', async () => {
+test('meta exposes statuses, system types and the map source', async () => {
   const meta = await (await fetch(base + '/api/meta')).json();
   assert.ok(meta.statuses.some((s) => s.value === 'obtained'));
   assert.ok(meta.systemTypes.length > 0);
   assert.equal(typeof meta.stats.total, 'number');
+  assert.ok(meta.map.url, 'the browser needs a tile url');
+  assert.ok(meta.map.label);
+  assert.equal(meta.map.warnings, undefined, 'operator warnings stay on the server');
 });
 
 test('create, read, update and delete a record over HTTP', async () => {
