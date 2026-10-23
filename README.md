@@ -20,7 +20,7 @@ For each CCTV enquiry:
 | **Where it came from** | Premises name, address, postcode, and a pin on the map |
 | **When you collected it** | Date and time of the visit, and who made it |
 | **What period the footage covers** | Footage from → to (this is the bit that makes it searchable) |
-| **Which way each camera looks** | Per camera: a bearing, a field of view, how far it usefully sees, and what it covers |
+| **Which way each camera looks** | Per camera: aim it on a mini-map of the premises — one click sets the direction and how far it sees — plus field of view and what it covers |
 | **The system** | Type, retention period, quality, media format |
 | **References** | Occurrence/crime reference, operation, exhibit reference, where the media is now stored |
 | **Outcome** | Obtained, requested, viewed only, no footage, system not working, refused, no reply, or still to do |
@@ -28,6 +28,13 @@ For each CCTV enquiry:
 The direction of view matters more than it looks. It is the difference between
 "there is a camera near your scene" and "there is a camera *pointing at* your
 scene".
+
+You set it by clicking a small map centred on the premises, towards whatever
+the camera actually looks at — the junction, the alley, the forecourt. That one
+click records both the bearing and how far the camera usefully sees, because
+pointing at a thing on a map is how people know a camera's direction. The
+bearing, field of view and range are all there as numbers too if you would
+rather type them.
 
 ## The three screens
 
@@ -267,7 +274,7 @@ src/
 public/
   index.html           app shell
   css/app.css          styles, light and dark
-  js/                  map, form, compass dial, list, detail, coverage
+  js/                  map, form, camera aiming, list, detail, coverage
   vendor/leaflet/      Leaflet 1.9.4 (BSD-2-Clause), bundled
 test/                  geo, records, api, auth
 scripts/

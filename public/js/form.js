@@ -1,6 +1,6 @@
 import { $, el, toLocalInput, fromLocalInput, toast } from './util.js';
 import { createPickerMap } from './map.js';
-import { createCompass } from './compass.js';
+import { createAimMap } from './aim.js';
 import { api, ApiError } from './api.js';
 
 let uid = 0;
@@ -35,7 +35,7 @@ function select(name, options, value) {
 
 /* ------------------------------------------------------------- cameras */
 
-function cameraRow(camera, { onRemove, onChange }) {
+function cameraRow(camera, { position, onRemove, onChange }) {
   const state = {
     id: camera.id,
     label: camera.label || '',
@@ -54,12 +54,18 @@ function cameraRow(camera, { onRemove, onChange }) {
   const coversInput = textInput('', state.covers, { placeholder: 'e.g. front door and pavement outside' });
   const labelInput = textInput('', state.label, { placeholder: 'Camera name, e.g. "Cam 3 - rear yard"' });
 
-  const compass = createCompass({
+  // Aiming happens on a map centred on the premises, so the direction is set
+  // against real streets rather than as an abstract compass bearing.
+  const aim = createAimMap({
+    position,
     bearing: state.bearing,
     fov: state.fov,
-    onChange: (value) => {
-      state.bearing = value;
-      bearingInput.value = value == null ? '' : String(Math.round(value));
+    range: state.range_m,
+    onChange: ({ bearing, range }) => {
+      state.bearing = bearing;
+      state.range_m = range;
+      bearingInput.value = bearing == null ? '' : String(Math.round(bearing));
+      rangeInput.value = String(Math.round(range));
       onChange();
     },
   });
@@ -67,15 +73,19 @@ function cameraRow(camera, { onRemove, onChange }) {
   bearingInput.addEventListener('input', () => {
     const value = bearingInput.value === '' ? null : Number(bearingInput.value);
     state.bearing = value == null || Number.isNaN(value) ? null : ((value % 360) + 360) % 360;
-    compass.set(state.bearing, state.fov);
+    aim.set({ bearing: state.bearing });
     onChange();
   });
   fovInput.addEventListener('input', () => {
     state.fov = Number(fovInput.value) || 60;
-    compass.set(state.bearing, state.fov);
+    aim.set({ fov: state.fov });
     onChange();
   });
-  rangeInput.addEventListener('input', () => { state.range_m = Number(rangeInput.value) || 40; onChange(); });
+  rangeInput.addEventListener('input', () => {
+    state.range_m = Number(rangeInput.value) || 40;
+    aim.set({ range: state.range_m });
+    onChange();
+  });
   coversInput.addEventListener('input', () => { state.covers = coversInput.value; onChange(); });
   labelInput.addEventListener('input', () => { state.label = labelInput.value; onChange(); });
 
@@ -88,35 +98,36 @@ function cameraRow(camera, { onRemove, onChange }) {
         onClick: () => { node.remove(); onRemove(state.id); onChange(); },
       }, 'Remove'),
     ]),
-    el('div', { className: 'camera__dir' }, [
-      compass.node,
-      el('div', {}, [
-        el('div', { className: 'field-row' }, [
-          field('Looking towards (°)', bearingInput, { help: 'Drag the dial, or type a bearing' }),
-          field('Field of view (°)', fovInput),
-        ]),
-        field('How far it usefully sees (m)', rangeInput),
-      ]),
+    aim.node,
+    el('div', { className: 'camera__numbers' }, [
+      field('Looking towards (°)', bearingInput),
+      field('Field of view (°)', fovInput),
+      field('Sees about (m)', rangeInput),
     ]),
     field('What this camera covers', coversInput),
   ]);
 
-  return { node, state };
+  return { node, state, aim };
 }
 
-function camerasSection(initial, onChange) {
+function camerasSection(initial, position, onChange) {
   const list = el('div', {});
   const states = [];
+  const aims = [];
 
   function add(camera) {
     const row = cameraRow(camera, {
+      position,
       onRemove: (id) => {
         const idx = states.findIndex((s) => s.id === id);
         if (idx >= 0) states.splice(idx, 1);
+        const ai = aims.indexOf(row.aim);
+        if (ai >= 0) aims.splice(ai, 1);
       },
       onChange,
     });
     states.push(row.state);
+    aims.push(row.aim);
     list.append(row.node);
   }
 
@@ -132,12 +143,16 @@ function camerasSection(initial, onChange) {
 
   const wrap = el('div', { className: 'span-2' }, [
     el('p', { className: 'field__help' },
-      'Record which way each camera looks. That is what lets someone else tell, at a glance, whether this footage covers their scene.'),
+      'Click each mini-map towards whatever the camera looks at — that sets its direction and how far it sees. ' +
+      'This is what lets someone else tell, at a glance, whether this footage covers their scene.'),
     list,
     addButton,
   ]);
 
-  return { node: wrap, states };
+  // Every camera map is centred on the premises, so they all follow the pin.
+  const setPosition = (next) => aims.forEach((aim) => aim.setPosition(next));
+
+  return { node: wrap, states, setPosition };
 }
 
 /* ---------------------------------------------------------------- form */
@@ -160,9 +175,11 @@ export function openRecordForm({ dialog, record, mapView, onSaved }) {
     position.lat = lat;
     position.lng = lng;
     latlngReadout.value = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+    // Each camera aims relative to this pin, so move their maps with it.
+    cameras.setPosition(position);
   };
 
-  const cameras = camerasSection(data.cameras || [], () => {});
+  const cameras = camerasSection(data.cameras || [], position, () => {});
 
   const statuses = (window.__cctvMeta?.statuses || []).map((s) => ({ value: s.value, label: s.label }));
   const systemTypes = ['', ...(window.__cctvMeta?.systemTypes || [])];

@@ -529,29 +529,64 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
   background: var(--surface-2);
 }
 .camera__head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
-.camera__head input { flex: 1; }
-.camera__dir { display: grid; grid-template-columns: 96px 1fr; gap: 12px; align-items: center; }
-.compass {
-  width: 96px; height: 96px;
-  border-radius: 50%;
+.camera__head input { flex: 1; min-width: 0; }
+.camera__numbers { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 10px; }
+.camera__numbers .field { min-width: 0; margin-bottom: 0; }
+.camera__numbers input { min-width: 0; }
+
+/* ----------------------------------------------------- aiming the camera */
+.aim { margin-top: 2px; }
+
+.aim__canvas {
+  height: 200px;
   border: 1px solid var(--border-2);
+  border-radius: var(--radius);
+  overflow: hidden;
   background: var(--surface);
-  position: relative;
   cursor: crosshair;
-  touch-action: none;
-  flex: none;
 }
-.compass__label { position: absolute; font-size: 9px; color: var(--text-mute); }
-.compass__n { top: 2px; left: 50%; transform: translateX(-50%); }
-.compass__e { right: 3px; top: 50%; transform: translateY(-50%); }
-.compass__s { bottom: 2px; left: 50%; transform: translateX(-50%); }
-.compass__w { left: 3px; top: 50%; transform: translateY(-50%); }
-.compass__cone { position: absolute; inset: 0; }
-.compass__readout {
-  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
-  font-family: var(--mono); font-size: 11px; font-weight: 600; color: var(--text);
-  pointer-events: none;
+.aim__canvas .leaflet-container { cursor: crosshair; }
+
+.aim__prompt {
+  margin: 0;
+  padding: 22px 14px;
+  text-align: center;
+  font-size: 12.5px;
+  color: var(--text-mute);
+  border: 1px dashed var(--border-2);
+  border-radius: var(--radius);
+  background: var(--surface);
 }
+
+.aim__readout {
+  margin: 6px 0 0;
+  font-size: 12.5px;
+  color: var(--text-dim);
+  min-height: 18px;
+}
+.aim__readout strong { color: var(--text); font-family: var(--mono); }
+
+/* The premises pin: fixed at the centre, the point everything is measured from. */
+.aim__centre {
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  background: var(--text);
+  border: 3px solid var(--surface);
+  box-shadow: 0 1px 4px rgba(0,0,0,.45);
+}
+
+/* Drag this towards whatever the camera looks at. */
+.aim__handle {
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 3px solid var(--surface);
+  box-shadow: 0 1px 5px rgba(0,0,0,.5);
+  cursor: grab;
+}
+.aim__handle:active { cursor: grabbing; }
+
+.aim__cone { pointer-events: none; }
 
 /* --------------------------------------------------------------- detail */
 .detail__title { font-size: 17px; font-weight: 650; margin: 0 0 2px; }
@@ -621,6 +656,8 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
   .coverage { grid-template-columns: 1fr; height: auto; }
   .coverage__form { border-right: 0; border-bottom: 1px solid var(--border); }
   .form-grid { grid-template-columns: 1fr; }
+  .camera__numbers { grid-template-columns: 1fr 1fr; }
+  .aim__canvas { height: 230px; }
   .detail dl { grid-template-columns: 1fr; gap: 2px 0; }
   .detail dd { margin-bottom: 7px; }
 }
