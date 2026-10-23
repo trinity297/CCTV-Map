@@ -8,6 +8,18 @@ import { resolveMapConfig } from './src/map-config.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 
+// Settings can live in a `.env` file next to this one, so they do not have to
+// be retyped on every start. Real environment variables still win over it, and
+// `.env` is git-ignored so keys never reach the repository.
+try {
+  process.loadEnvFile(join(here, '.env'));
+} catch (err) {
+  if (err.code !== 'ENOENT') {
+    console.error(`\n  Could not read ${join(here, '.env')}: ${err.message}\n`);
+    process.exit(1);
+  }
+}
+
 const PORT = Number(process.env.PORT || 4173);
 const HOST = process.env.HOST || '127.0.0.1';
 const DB_FILE = resolve(process.env.CCTV_MAP_DB || join(here, 'data', 'cctv-map.db'));

@@ -76,7 +76,31 @@ when you have finished looking, or run `npm run seed` again to reset them.
 
 ### Settings
 
-All optional, set as environment variables:
+Copy `.env.example` to `.env` in the same folder and edit it:
+
+```bash
+cp .env.example .env
+```
+
+That file is where your Ordnance Survey key goes, along with anything else you
+want set every time:
+
+```
+CCTV_MAP_OS_API_KEY=your-os-maps-api-key
+CCTV_MAP_PASSCODE=pick-something-long
+```
+
+Then just `node server.js` — it reads `.env` automatically. The file is
+git-ignored, so nothing you put in it is ever committed.
+
+You can still set any of these as ordinary environment variables instead, and
+those take precedence over the file when both are present:
+
+```bash
+CCTV_MAP_TILES=os-light node server.js
+```
+
+Everything is optional — the app runs with none of it set:
 
 | Variable | Default | What it does |
 |---|---|---|
@@ -127,10 +151,22 @@ and:
 CCTV_MAP_OS_API_KEY=your-key node server.js
 ```
 
-Setting the key is enough — the map switches to OS automatically. Note the key
-ends up in the tile URLs the browser requests, which is how OS raster keys are
-designed to work, so restrict it to your host in the Data Hub rather than
-treating it as a secret.
+Or put it in `.env` and just run `node server.js`:
+
+```
+CCTV_MAP_OS_API_KEY=your-key
+```
+
+Either way, setting the key is enough — the map switches to OS automatically.
+
+Pick the **OS Maps API** when you add an API to your Data Hub project. It
+serves pre-rendered raster tiles, which is what this app draws. *OS NGD API –
+Tiles* and *OS Vector Tile API* both serve vector tiles, which Leaflet cannot
+render — choosing those gives a blank map.
+
+Note the key ends up in the tile URLs the browser requests, which is how OS
+raster keys are designed to work. Restrict it to your host in the Data Hub
+rather than relying on `.env` to keep it secret.
 
 **About `osm`.** OpenStreetMap's tile servers run on donated hardware for the
 OSM project's own benefit, and their
@@ -201,6 +237,7 @@ npm run dev       # restarts on change
 ```
 
 ```
+.env.example           template for .env - API keys and settings
 server.js              entry point
 src/
   db.js                schema
