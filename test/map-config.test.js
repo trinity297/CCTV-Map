@@ -131,3 +131,17 @@ test('a malformed numeric setting warns instead of being silently dropped', () =
 test('a negative or zero zoom is rejected', () => {
   assert.match(resolveMapConfig({ CCTV_MAP_TILE_MAX_ZOOM: '-3' }).warnings.join(' '), /not a positive number/);
 });
+
+test('setting max zoom when native zoom was meant is explained, not swallowed', () => {
+  // Capping the map below the imagery it requests does nothing, because the
+  // cap is raised back up. Saying so beats leaving someone to wonder.
+  const config = resolveMapConfig({ CCTV_MAP_TILE_MAX_ZOOM: '16' });
+  assert.equal(config.maxZoom, 19);
+  assert.match(config.warnings.join(' '), /CCTV_MAP_TILE_MAX_NATIVE_ZOOM, not this/);
+});
+
+test('a max zoom above the imagery is left alone and not warned about', () => {
+  const config = resolveMapConfig({ CCTV_MAP_TILE_MAX_ZOOM: '22' });
+  assert.equal(config.maxZoom, 22);
+  assert.deepEqual(config.warnings, []);
+});

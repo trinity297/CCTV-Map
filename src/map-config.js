@@ -141,11 +141,16 @@ export function resolveMapConfig(env = process.env) {
   const maxNativeZoom = num(env.CCTV_MAP_TILE_MAX_NATIVE_ZOOM, preset.maxNativeZoom ?? null,
     { name: 'CCTV_MAP_TILE_MAX_NATIVE_ZOOM', warnings });
   // Never let the map stop short of the imagery that exists.
-  const maxZoom = Math.max(
-    num(env.CCTV_MAP_TILE_MAX_ZOOM, preset.maxZoom,
-      { name: 'CCTV_MAP_TILE_MAX_ZOOM', warnings }),
-    maxNativeZoom || 0,
-  );
+  const askedMaxZoom = num(env.CCTV_MAP_TILE_MAX_ZOOM, preset.maxZoom,
+    { name: 'CCTV_MAP_TILE_MAX_ZOOM', warnings });
+  const maxZoom = Math.max(askedMaxZoom, maxNativeZoom || 0);
+  if (env.CCTV_MAP_TILE_MAX_ZOOM && maxZoom !== askedMaxZoom) {
+    warnings.push(
+      `CCTV_MAP_TILE_MAX_ZOOM=${askedMaxZoom} was raised to ${maxZoom} because imagery ` +
+      `is requested to zoom ${maxNativeZoom}. If you meant "the provider has no imagery ` +
+      `past zoom ${askedMaxZoom}", that is CCTV_MAP_TILE_MAX_NATIVE_ZOOM, not this.`,
+    );
+  }
 
   // Which settings the operator actually supplied, so a diagnostic can say
   // whether a line in .env took effect or is still commented out.

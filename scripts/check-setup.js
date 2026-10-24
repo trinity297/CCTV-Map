@@ -7,7 +7,7 @@
  * does, then - if an Ordnance Survey key is configured - asks OS for one real
  * tile to prove the key actually works.
  */
-import { existsSync, readdirSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { resolveMapConfig, PRESETS } from '../src/map-config.js';
@@ -72,6 +72,34 @@ if (!key) {
   if (key.length < 20) {
     warn(`only ${key.length} characters — OS project keys are longer than this.`);
     warn('  Have you pasted the project *secret* instead of the project *API key*?');
+  }
+}
+
+/* ----------------------------------------------- 3b. credential hygiene */
+const secret = (process.env.CCTV_MAP_SECRET || '').trim();
+if (secret && key && secret === key) {
+  fail('CCTV_MAP_SECRET is the same string as your map API key',
+    'The map key is sent to every browser inside tile URLs, so this makes your ' +
+    'session signing secret public — anyone who can open the app could forge a ' +
+    'sign-in and bypass the passcode.\n' +
+    '     Set CCTV_MAP_SECRET to a different random string, e.g.\n' +
+    '       node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"');
+}
+
+/* ------------------------------------------- 3c. settings you may lack -- */
+// .env is never touched by `git pull`, so options added since you copied the
+// template are simply absent, and easy to mistake for ones that do not exist.
+if (existsSync(envPath) && existsSync(join(root, '.env.example'))) {
+  const names = (text) => new Set(
+    [...text.matchAll(/^\s*#?\s*([A-Z][A-Z0-9_]+)=/gm)].map((m) => m[1]),
+  );
+  const mine = names(readFileSync(envPath, 'utf8'));
+  const missing = [...names(readFileSync(join(root, '.env.example'), 'utf8'))]
+    .filter((n) => !mine.has(n));
+  if (missing.length) {
+    console.log('\nSettings added since you made your .env');
+    for (const n of missing) console.log(`    ${n}`);
+    warn('These are documented in .env.example — copy across any you need.');
   }
 }
 
