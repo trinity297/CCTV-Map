@@ -233,6 +233,13 @@ The check also refuses to guess from an ambiguous failure. Only a 404 means
 "no imagery here"; a rate limit or an auth error makes it say it could not
 establish the limit rather than talk you into crippling a working map.
 
+**If zoom works up to a point and then returns 403**, that is your plan, not a
+fault. The free OS Data Hub plan serves open data, which does not go to
+street level. For UK policing you want your force's Public Sector Geospatial
+Agreement access rather than a personal account — ask whoever runs your force's
+OS Data Hub organisation to add you to it. Until then `CCTV_MAP_TILES=carto-voyager`
+zooms deeper than a free OS plan, though without OS address detail.
+
 ### Where the data lives
 
 One SQLite file, `data/cctv-map.db`. Back it up by copying it. Move it to

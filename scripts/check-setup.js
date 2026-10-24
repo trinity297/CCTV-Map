@@ -87,8 +87,8 @@ if (config.url) {
 // Say where each value came from, so a line still commented out in .env is
 // obvious rather than looking like the setting simply did not work.
 const source = (name) => (config.supplied[name] ? 'from your settings' : 'default — not set by you');
-console.log(`    max zoom ${config.maxZoom} · imagery to zoom ${config.maxNativeZoom}` +
-  ` (${source('CCTV_MAP_TILE_MAX_NATIVE_ZOOM')})`);
+console.log(`    max zoom ${config.maxZoom} (${source('CCTV_MAP_TILE_MAX_ZOOM')})` +
+  ` · imagery to zoom ${config.maxNativeZoom} (${source('CCTV_MAP_TILE_MAX_NATIVE_ZOOM')})`);
 if (!config.supplied.CCTV_MAP_TILE_MAX_NATIVE_ZOOM) {
   warn('CCTV_MAP_TILE_MAX_NATIVE_ZOOM is not taking effect.');
   warn('  If you edited that line in .env, check it does not still start with "#".');
@@ -184,7 +184,20 @@ if (config.url) {
     const probe = await findDeepestZoom(14);
     const configured = config.maxNativeZoom;
 
-    if (!probe.conclusive) {
+    if (!probe.conclusive && (probe.status === 403 || probe.status === 401)) {
+      // 200 below a zoom and 403 at it, twice over, is not a fault or a
+      // missing tile - it is the account not being entitled to that detail.
+      console.log(`    zoom ${probe.deepest} works; zoom ${probe.z} returns ${probe.status}`);
+      fail(`your map plan appears to stop at zoom ${probe.deepest}`,
+        `Zoom ${probe.deepest} is served but zoom ${probe.z} is refused, twice. That is an ` +
+        'entitlement limit on the plan behind your key, not a fault.\n' +
+        `     To make the map work now: put CCTV_MAP_TILE_MAX_NATIVE_ZOOM=${probe.deepest} in .env ` +
+        '(as a real line, not one starting with "#").\n' +
+        `     But zoom ${probe.deepest} is too coarse to pick out a doorway. For street-level ` +
+        'detail you need a plan with deeper imagery — for UK policing that means your\n' +
+        '     force\'s PSGA access rather than a personal OS Data Hub account. In the meantime ' +
+        'CCTV_MAP_TILES=carto-voyager zooms deeper, without OS address detail.');
+    } else if (!probe.conclusive) {
       warn(`could not establish the zoom limit: zoom ${probe.z} returned ` +
         `${probe.status || probe.error}, which is not "no imagery here".`);
       warn(`  Imagery confirmed to at least zoom ${probe.deepest}. If that status was a`);
