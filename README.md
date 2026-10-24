@@ -215,6 +215,24 @@ how far in the provider actually goes and tells you what to set
 `CCTV_MAP_TILE_MAX_NATIVE_ZOOM` to. Below that level the map stays sharp;
 above it, the last real tile is scaled up rather than a missing one requested.
 
+The check prints where each value came from:
+
+```
+    max zoom 21 · imagery to zoom 19 (default — not set by you)
+```
+
+`default — not set by you` means your `.env` line is not taking effect. The
+usual reason is that it still starts with `#`, which switches the line off —
+changing the number on a commented line leaves it commented. It should read:
+
+```
+CCTV_MAP_TILE_MAX_NATIVE_ZOOM=20
+```
+
+The check also refuses to guess from an ambiguous failure. Only a 404 means
+"no imagery here"; a rate limit or an auth error makes it say it could not
+establish the limit rather than talk you into crippling a working map.
+
 ### Where the data lives
 
 One SQLite file, `data/cctv-map.db`. Back it up by copying it. Move it to

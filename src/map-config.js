@@ -95,9 +95,14 @@ export const PRESETS = {
 
 export const DEFAULT_PRESET = 'carto-voyager';
 
-const num = (value, fallback) => {
+const num = (value, fallback, { name, warnings } = {}) => {
+  if (value === undefined || value === '') return fallback;
   const n = Number(value);
-  return Number.isFinite(n) && n > 0 ? n : fallback;
+  if (Number.isFinite(n) && n > 0) return n;
+  // Silently ignoring a setting someone deliberately typed is how an hour
+  // gets lost wondering why it had no effect.
+  warnings?.push(`${name}="${value}" is not a positive number — ignoring it.`);
+  return fallback;
 };
 
 /**
@@ -133,11 +138,21 @@ export function resolveMapConfig(env = process.env) {
 
   const url = customUrl || preset.url.replace('{osKey}', encodeURIComponent(osKey));
 
-  const maxNativeZoom = num(env.CCTV_MAP_TILE_MAX_NATIVE_ZOOM, preset.maxNativeZoom ?? null);
+  const maxNativeZoom = num(env.CCTV_MAP_TILE_MAX_NATIVE_ZOOM, preset.maxNativeZoom ?? null,
+    { name: 'CCTV_MAP_TILE_MAX_NATIVE_ZOOM', warnings });
   // Never let the map stop short of the imagery that exists.
   const maxZoom = Math.max(
-    num(env.CCTV_MAP_TILE_MAX_ZOOM, preset.maxZoom),
+    num(env.CCTV_MAP_TILE_MAX_ZOOM, preset.maxZoom,
+      { name: 'CCTV_MAP_TILE_MAX_ZOOM', warnings }),
     maxNativeZoom || 0,
+  );
+
+  // Which settings the operator actually supplied, so a diagnostic can say
+  // whether a line in .env took effect or is still commented out.
+  const supplied = Object.fromEntries(
+    ['CCTV_MAP_TILES', 'CCTV_MAP_TILE_URL', 'CCTV_MAP_TILE_MAX_ZOOM',
+     'CCTV_MAP_TILE_MAX_NATIVE_ZOOM', 'CCTV_MAP_OS_API_KEY']
+      .map((k) => [k, env[k] !== undefined && env[k] !== '']),
   );
 
   return {
@@ -148,6 +163,7 @@ export function resolveMapConfig(env = process.env) {
     maxZoom,
     maxNativeZoom,
     subdomains: env.CCTV_MAP_TILE_SUBDOMAINS || preset.subdomains || 'abc',
+    supplied,
     warnings,
   };
 }

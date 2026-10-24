@@ -84,6 +84,15 @@ if (config.url) {
   // Redact before printing - the key lives in this URL.
   console.log(`    ${config.url.replace(/key=[^&]+/, 'key=<hidden>')}`);
 }
+// Say where each value came from, so a line still commented out in .env is
+// obvious rather than looking like the setting simply did not work.
+const source = (name) => (config.supplied[name] ? 'from your settings' : 'default — not set by you');
+console.log(`    max zoom ${config.maxZoom} · imagery to zoom ${config.maxNativeZoom}` +
+  ` (${source('CCTV_MAP_TILE_MAX_NATIVE_ZOOM')})`);
+if (!config.supplied.CCTV_MAP_TILE_MAX_NATIVE_ZOOM) {
+  warn('CCTV_MAP_TILE_MAX_NATIVE_ZOOM is not taking effect.');
+  warn('  If you edited that line in .env, check it does not still start with "#".');
+}
 if (!config.url && config.name !== 'none') {
   fail('no tile URL resolved, so the map will have no background',
     'Set CCTV_MAP_OS_API_KEY, or pick a preset: ' + Object.keys(PRESETS).join(', '));
@@ -117,6 +126,33 @@ async function fetchTile(z) {
   }
 }
 
+const pause = (ms) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * Walks zoom levels to find the deepest one with real imagery.
+ * Only a 404 means "no tile here". Anything else - a rate limit, an auth
+ * problem, a timeout - is inconclusive, and must not be mistaken for the
+ * provider's limit, or we would tell people to cripple a working map.
+ */
+async function findDeepestZoom(from) {
+  let deepest = from;
+  for (const z of [16, 17, 18, 19, 20, 21, 22]) {
+    await pause(350); // do not trip the provider's rate limit
+    let result = await fetchTile(z);
+    if (!result.ok && result.status !== 404) {
+      await pause(1500);
+      result = await fetchTile(z); // one retry before believing a failure
+    }
+    if (result.ok) {
+      deepest = z;
+      continue;
+    }
+    if (result.status === 404) return { deepest, conclusive: true };
+    return { deepest, conclusive: false, status: result.status, error: result.error, z };
+  }
+  return { deepest, conclusive: true };
+}
+
 if (config.url) {
   console.log('\nFetching real map tiles');
   const base = await fetchTile(14);
@@ -145,25 +181,27 @@ if (config.url) {
   // How far in does this provider actually have imagery? Asking for a zoom
   // it does not have is what makes the map look broken when you zoom right in.
   if (base.ok) {
-    let deepest = 14;
-    for (const z of [16, 17, 18, 19, 20, 21, 22]) {
-      const r = await fetchTile(z);
-      if (!r.ok) break;
-      deepest = z;
-    }
+    const probe = await findDeepestZoom(14);
     const configured = config.maxNativeZoom;
-    console.log(`    deepest zoom with real imagery: ${deepest}`);
-    if (!configured) {
-      warn(`no maxNativeZoom configured — set CCTV_MAP_TILE_MAX_NATIVE_ZOOM=${deepest}`);
-    } else if (configured > deepest) {
-      fail(`configured to request zoom ${configured}, but imagery stops at ${deepest}`,
-        `This is what makes the map fail when you zoom right in. ` +
-        `Put CCTV_MAP_TILE_MAX_NATIVE_ZOOM=${deepest} in your .env`);
-    } else if (configured < deepest) {
-      warn(`imagery goes to zoom ${deepest} but only ${configured} is requested — ` +
-        `set CCTV_MAP_TILE_MAX_NATIVE_ZOOM=${deepest} for a sharper map close in`);
+
+    if (!probe.conclusive) {
+      warn(`could not establish the zoom limit: zoom ${probe.z} returned ` +
+        `${probe.status || probe.error}, which is not "no imagery here".`);
+      warn(`  Imagery confirmed to at least zoom ${probe.deepest}. If that status was a`);
+      warn('  rate limit, wait a minute and run this again before changing anything.');
     } else {
-      tick(`zoom settings match the imagery available (native max ${deepest})`);
+      console.log(`    deepest zoom with real imagery: ${probe.deepest}`);
+      if (configured > probe.deepest) {
+        fail(`configured to request zoom ${configured}, but imagery stops at ${probe.deepest}`,
+          'This is what makes the map fail when you zoom right in. Put ' +
+          `CCTV_MAP_TILE_MAX_NATIVE_ZOOM=${probe.deepest} in your .env — as a real line, ` +
+          'not one starting with "#"');
+      } else if (configured < probe.deepest) {
+        warn(`imagery goes to zoom ${probe.deepest} but only ${configured} is requested — ` +
+          `set CCTV_MAP_TILE_MAX_NATIVE_ZOOM=${probe.deepest} for a sharper map close in`);
+      } else {
+        tick(`zoom settings match the imagery available (native max ${probe.deepest})`);
+      }
     }
   }
 }

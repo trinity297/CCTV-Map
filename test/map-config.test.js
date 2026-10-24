@@ -110,3 +110,24 @@ test('a custom tile url still gets a native zoom so it is not left unbounded', (
   const config = resolveMapConfig({ CCTV_MAP_TILE_URL: 'https://x/{z}/{x}/{y}.png' });
   assert.ok(config.maxNativeZoom > 0);
 });
+
+test('settings report whether the operator actually supplied them', () => {
+  // A line left commented out in .env must be distinguishable from one that
+  // worked, or there is no way to tell why a setting had no effect.
+  assert.equal(resolveMapConfig({}).supplied.CCTV_MAP_TILE_MAX_NATIVE_ZOOM, false);
+  assert.equal(
+    resolveMapConfig({ CCTV_MAP_TILE_MAX_NATIVE_ZOOM: '16' }).supplied.CCTV_MAP_TILE_MAX_NATIVE_ZOOM,
+    true,
+  );
+  assert.equal(resolveMapConfig({ CCTV_MAP_TILE_MAX_NATIVE_ZOOM: '' }).supplied.CCTV_MAP_TILE_MAX_NATIVE_ZOOM, false);
+});
+
+test('a malformed numeric setting warns instead of being silently dropped', () => {
+  const config = resolveMapConfig({ CCTV_MAP_TILE_MAX_NATIVE_ZOOM: '16 # inline comment' });
+  assert.equal(config.maxNativeZoom, 19, 'falls back to the preset');
+  assert.match(config.warnings.join(' '), /not a positive number/);
+});
+
+test('a negative or zero zoom is rejected', () => {
+  assert.match(resolveMapConfig({ CCTV_MAP_TILE_MAX_ZOOM: '-3' }).warnings.join(' '), /not a positive number/);
+});
