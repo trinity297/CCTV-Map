@@ -234,9 +234,27 @@ if (config.url) {
       `Tried: ${tileUrl(14).replace(/key=[^&]+/, 'key=<hidden>')}`);
   }
 
+  // A provider that wants an API key often answers with a watermark image
+  // rather than an error, which looks like success to a status check.
+  let placeholder = false;
+  if (base.ok) {
+    await pause(350);
+    const pair = await hasRealImagery(14);
+    if (pair.blank) {
+      placeholder = true;
+      fail('this provider returns the same image for every tile',
+        'Two different map squares came back byte-identical, so it is serving a ' +
+        'placeholder - usually "API key required" or a refusal notice - rather than ' +
+        'map imagery.\n' +
+        '     That provider needs an account, or is declining requests from this host. ' +
+        'Switch with CCTV_MAP_TILES, or use CCTV_MAP_TILES=none to work without a ' +
+        'background map.');
+    }
+  }
+
   // How far in does this provider actually have imagery? Asking for a zoom
   // it does not have is what makes the map look broken when you zoom right in.
-  if (base.ok) {
+  if (base.ok && !placeholder) {
     const probe = await findDeepestZoom(14);
     const configured = config.maxNativeZoom;
 

@@ -160,6 +160,7 @@ CCTV_MAP_TILES=carto-positron node server.js
 | `carto-positron` | The same, in a pale style that makes the coloured pins stand out |
 | `carto-dark` | Dark style |
 | `os-road`, `os-light`, `os-outdoor` | **Ordnance Survey.** Needs `CCTV_MAP_OS_API_KEY` |
+| `esri-street`, `esri-imagery` | Esri's public basemaps, no account needed. Check Esri's terms before organisational use |
 | `osm` | OpenStreetMap's own servers. Read the warning below before choosing this |
 | `none` | No background at all. Pins and cones on a plain backdrop — works with no internet access whatsoever |
 
@@ -233,12 +234,24 @@ The check also refuses to guess from an ambiguous failure. Only a 404 means
 "no imagery here"; a rate limit or an auth error makes it say it could not
 establish the limit rather than talk you into crippling a working map.
 
+**If the check says the provider returns the same image for every tile**, it is
+serving a placeholder — usually an "API key required" notice — rather than map
+imagery. Free basemap services change their terms, and several that once
+allowed anonymous use now want an account. Switch provider with
+`CCTV_MAP_TILES`, or run with `CCTV_MAP_TILES=none` and work without a
+background map; pins, cones and the coverage check are unaffected.
+
 **If zoom works up to a point and then returns 403**, that is your plan, not a
 fault. The free OS Data Hub plan serves open data, which does not go to
 street level. For UK policing you want your force's Public Sector Geospatial
 Agreement access rather than a personal account — ask whoever runs your force's
-OS Data Hub organisation to add you to it. Until then `CCTV_MAP_TILES=carto-voyager`
-zooms deeper than a free OS plan, though without OS address detail.
+OS Data Hub organisation to add you to it.
+
+A quicker interim step: in the OS Data Hub, a project on the **OpenData** plan
+is limited to open data, which does not reach street level. Switching that
+project to the **Premium** plan — which carries a free monthly allowance —
+unlocks the full zoom range on the same key. Check the licensing suits your
+force before relying on it for real work.
 
 ### Where the data lives
 

@@ -75,6 +75,23 @@ export const PRESETS = {
     requiresOsKey: true,
   },
 
+  // Esri's public basemap endpoint, which needs no account. Attribution is
+  // required; check Esri's terms before relying on it for organisational use.
+  'esri-street': {
+    label: 'Esri World Street Map',
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
+    maxZoom: 21,
+    maxNativeZoom: 19,
+    attribution: 'Tiles &copy; <a href="https://www.esri.com">Esri</a>',
+  },
+  'esri-imagery': {
+    label: 'Esri World Imagery (aerial)',
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    maxZoom: 21,
+    maxNativeZoom: 18,
+    attribution: 'Tiles &copy; <a href="https://www.esri.com">Esri</a>',
+  },
+
   // Only appropriate for genuinely light, personal use - see the note above.
   osm: {
     label: 'OpenStreetMap (volunteer servers)',

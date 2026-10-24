@@ -145,3 +145,10 @@ test('a max zoom above the imagery is left alone and not warned about', () => {
   assert.equal(config.maxZoom, 22);
   assert.deepEqual(config.warnings, []);
 });
+
+test('there is a keyless preset to fall back to when a provider wants an account', () => {
+  const config = resolveMapConfig({ CCTV_MAP_TILES: 'esri-street' });
+  assert.ok(config.url.includes('arcgisonline'));
+  assert.ok(config.attribution.includes('Esri'));
+  assert.ok(config.maxNativeZoom > 0);
+});
