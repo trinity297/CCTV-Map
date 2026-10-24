@@ -118,6 +118,7 @@ Everything is optional — the app runs with none of it set:
 | `CCTV_MAP_SECRET` | random | Signing key for session cookies. Set it to a long random string if you want sign-ins to survive a restart |
 | `CCTV_MAP_TILES` | `carto-voyager` | Which map background to use — see below |
 | `CCTV_MAP_OS_API_KEY` | *(unset)* | Ordnance Survey Data Hub key. Setting it switches the map to OS mapping |
+| `CCTV_MAP_CARTO_API_KEY` | *(unset)* | CARTO account key, added to CARTO tile URLs as `?api_key=` |
 | `CCTV_MAP_TILE_URL` | *(unset)* | A tile URL template of your own, e.g. a tile server inside your network. Overrides everything above |
 | `CCTV_MAP_TILE_ATTRIBUTION` | per provider | Attribution text shown in the corner of the map |
 | `CCTV_MAP_TILE_MAX_ZOOM` | per provider | How far the map will zoom in |
@@ -233,6 +234,20 @@ CCTV_MAP_TILE_MAX_NATIVE_ZOOM=20
 The check also refuses to guess from an ambiguous failure. Only a 404 means
 "no imagery here"; a rate limit or an auth error makes it say it could not
 establish the limit rather than talk you into crippling a working map.
+
+**If a provider gives you a key but the map still fails**, the way the key is
+passed varies between services and plans. The reliable route is to copy the
+exact tile URL template the provider shows you and use it directly, which
+sidesteps any guesswork on this side:
+
+```
+CCTV_MAP_TILE_URL=https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png?api_key=YOUR_KEY
+CCTV_MAP_TILE_ATTRIBUTION=© OpenStreetMap contributors © CARTO
+```
+
+`npm run check` fetches real tiles through whatever you set, so it will tell
+you within seconds whether the key is being accepted. Keys are hidden from its
+output, so the result is safe to share.
 
 **If the check says the provider returns the same image for every tile**, it is
 serving a placeholder — usually an "API key required" notice — rather than map

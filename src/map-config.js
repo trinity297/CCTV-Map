@@ -27,6 +27,8 @@ export const PRESETS = {
     subdomains: 'abcd',
     maxZoom: 21,
     maxNativeZoom: 19,
+    keyEnv: 'CCTV_MAP_CARTO_API_KEY',
+    keyParam: 'api_key',
     attribution: `${OSM_ATTRIBUTION} &copy; <a href="https://carto.com/attributions">CARTO</a>`,
   },
   'carto-positron': {
@@ -35,6 +37,8 @@ export const PRESETS = {
     subdomains: 'abcd',
     maxZoom: 21,
     maxNativeZoom: 19,
+    keyEnv: 'CCTV_MAP_CARTO_API_KEY',
+    keyParam: 'api_key',
     attribution: `${OSM_ATTRIBUTION} &copy; <a href="https://carto.com/attributions">CARTO</a>`,
   },
   'carto-dark': {
@@ -43,6 +47,8 @@ export const PRESETS = {
     subdomains: 'abcd',
     maxZoom: 21,
     maxNativeZoom: 19,
+    keyEnv: 'CCTV_MAP_CARTO_API_KEY',
+    keyParam: 'api_key',
     attribution: `${OSM_ATTRIBUTION} &copy; <a href="https://carto.com/attributions">CARTO</a>`,
   },
 
@@ -153,7 +159,16 @@ export function resolveMapConfig(env = process.env) {
     );
   }
 
-  const url = customUrl || preset.url.replace('{osKey}', encodeURIComponent(osKey));
+  let url = customUrl || preset.url.replace('{osKey}', encodeURIComponent(osKey));
+
+  // Some providers take a key as a query parameter rather than in the path.
+  // If the parameter name turns out to be wrong for your account, set
+  // CCTV_MAP_TILE_URL to the exact template the provider gave you instead.
+  const providerKey = preset.keyEnv ? (env[preset.keyEnv] || '').trim() : '';
+  if (!customUrl && providerKey && preset.keyParam) {
+    const join = url.includes('?') ? '&' : '?';
+    url += `${join}${preset.keyParam}=${encodeURIComponent(providerKey)}`;
+  }
 
   const maxNativeZoom = num(env.CCTV_MAP_TILE_MAX_NATIVE_ZOOM, preset.maxNativeZoom ?? null,
     { name: 'CCTV_MAP_TILE_MAX_NATIVE_ZOOM', warnings });
@@ -173,7 +188,7 @@ export function resolveMapConfig(env = process.env) {
   // whether a line in .env took effect or is still commented out.
   const supplied = Object.fromEntries(
     ['CCTV_MAP_TILES', 'CCTV_MAP_TILE_URL', 'CCTV_MAP_TILE_MAX_ZOOM',
-     'CCTV_MAP_TILE_MAX_NATIVE_ZOOM', 'CCTV_MAP_OS_API_KEY']
+     'CCTV_MAP_TILE_MAX_NATIVE_ZOOM', 'CCTV_MAP_OS_API_KEY', 'CCTV_MAP_CARTO_API_KEY']
       .map((k) => [k, env[k] !== undefined && env[k] !== '']),
   );
 

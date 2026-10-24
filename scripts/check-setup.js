@@ -16,6 +16,10 @@ const here = dirname(fileURLToPath(import.meta.url));
 const root = join(here, '..');
 const envPath = join(root, '.env');
 
+/** Hides any credential carried in a URL's query string. */
+const redact = (url) =>
+  String(url).replace(/([?&](?:api_?key|key|token|access_token)=)[^&]+/gi, '$1<hidden>');
+
 const tick = (m) => console.log(`  ✓ ${m}`);
 const cross = (m) => console.log(`  ✗ ${m}`);
 const warn = (m) => console.log(`  ! ${m}`);
@@ -110,7 +114,7 @@ tick(`using: ${config.label}`);
 for (const w of config.warnings) warn(w);
 if (config.url) {
   // Redact before printing - the key lives in this URL.
-  console.log(`    ${config.url.replace(/key=[^&]+/, 'key=<hidden>')}`);
+  console.log(`    ${redact(config.url)}`);
 }
 // Say where each value came from, so a line still commented out in .env is
 // obvious rather than looking like the setting simply did not work.
@@ -231,7 +235,7 @@ if (config.url) {
       'CCTV_MAP_TILES=none to stop trying');
   } else {
     fail(`unexpected response ${base.status} (${base.type || 'no content type'})`,
-      `Tried: ${tileUrl(14).replace(/key=[^&]+/, 'key=<hidden>')}`);
+      `Tried: ${redact(tileUrl(14))}`);
   }
 
   // A provider that wants an API key often answers with a watermark image

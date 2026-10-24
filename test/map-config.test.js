@@ -152,3 +152,23 @@ test('there is a keyless preset to fall back to when a provider wants an account
   assert.ok(config.attribution.includes('Esri'));
   assert.ok(config.maxNativeZoom > 0);
 });
+
+test('a provider key is appended as that provider expects', () => {
+  const config = resolveMapConfig({ CCTV_MAP_CARTO_API_KEY: 'cb1_demo/key' });
+  assert.match(config.url, /\?api_key=cb1_demo%2Fkey$/, 'and is URL encoded');
+  assert.equal(config.supplied.CCTV_MAP_CARTO_API_KEY, true);
+});
+
+test('a provider key is ignored by presets that do not take one', () => {
+  const config = resolveMapConfig({ CCTV_MAP_CARTO_API_KEY: 'k', CCTV_MAP_TILES: 'esri-street' });
+  assert.ok(!config.url.includes('api_key'));
+});
+
+test('an explicit tile url is never rewritten with a key', () => {
+  // The whole point of a custom url is that it is used exactly as given.
+  const config = resolveMapConfig({
+    CCTV_MAP_CARTO_API_KEY: 'k',
+    CCTV_MAP_TILE_URL: 'https://example.test/{z}/{x}/{y}.png?token=mine',
+  });
+  assert.equal(config.url, 'https://example.test/{z}/{x}/{y}.png?token=mine');
+});
