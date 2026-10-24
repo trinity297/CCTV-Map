@@ -76,3 +76,37 @@ test('every preset is well formed', () => {
     }
   }
 });
+
+test('every preset declares the deepest zoom it really has imagery for', () => {
+  // Requesting a zoom the provider lacks makes the map go blank exactly when
+  // you zoom in to look at a doorway - the thing this app is for.
+  for (const [name, preset] of Object.entries(PRESETS)) {
+    if (!preset.url) continue;
+    assert.ok(preset.maxNativeZoom > 0, `${name} must declare maxNativeZoom`);
+    assert.ok(preset.maxZoom >= preset.maxNativeZoom,
+      `${name} must let the map reach the imagery it has`);
+  }
+});
+
+test('the map may zoom past the imagery, so Leaflet upscales instead of 404ing', () => {
+  const config = resolveMapConfig({});
+  assert.ok(config.maxZoom > config.maxNativeZoom);
+});
+
+test('native zoom can be corrected for a provider without touching code', () => {
+  const config = resolveMapConfig({ CCTV_MAP_TILE_MAX_NATIVE_ZOOM: '17' });
+  assert.equal(config.maxNativeZoom, 17);
+});
+
+test('max zoom is never left below the imagery that exists', () => {
+  const config = resolveMapConfig({
+    CCTV_MAP_TILE_MAX_ZOOM: '12',
+    CCTV_MAP_TILE_MAX_NATIVE_ZOOM: '20',
+  });
+  assert.equal(config.maxZoom, 20, 'otherwise real imagery would be unreachable');
+});
+
+test('a custom tile url still gets a native zoom so it is not left unbounded', () => {
+  const config = resolveMapConfig({ CCTV_MAP_TILE_URL: 'https://x/{z}/{x}/{y}.png' });
+  assert.ok(config.maxNativeZoom > 0);
+});

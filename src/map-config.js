@@ -11,6 +11,12 @@
 
 const YEAR = new Date().getFullYear();
 
+// maxNativeZoom is the deepest zoom a provider actually has images for.
+// maxZoom is how far the map will let you go: past maxNativeZoom, Leaflet
+// scales the last real tile up rather than requesting one that does not
+// exist. Without this, the final zoom level asks for missing tiles and the
+// map looks broken exactly when you are trying to look closely at a doorway.
+
 const OSM_ATTRIBUTION =
   '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
 
@@ -19,21 +25,24 @@ export const PRESETS = {
     label: 'CARTO Voyager',
     url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
     subdomains: 'abcd',
-    maxZoom: 20,
+    maxZoom: 21,
+    maxNativeZoom: 19,
     attribution: `${OSM_ATTRIBUTION} &copy; <a href="https://carto.com/attributions">CARTO</a>`,
   },
   'carto-positron': {
     label: 'CARTO Positron (pale)',
     url: 'https://{s}.basemaps.cartocdn.com/rastertiles/light_all/{z}/{x}/{y}{r}.png',
     subdomains: 'abcd',
-    maxZoom: 20,
+    maxZoom: 21,
+    maxNativeZoom: 19,
     attribution: `${OSM_ATTRIBUTION} &copy; <a href="https://carto.com/attributions">CARTO</a>`,
   },
   'carto-dark': {
     label: 'CARTO Dark Matter',
     url: 'https://{s}.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}{r}.png',
     subdomains: 'abcd',
-    maxZoom: 20,
+    maxZoom: 21,
+    maxNativeZoom: 19,
     attribution: `${OSM_ATTRIBUTION} &copy; <a href="https://carto.com/attributions">CARTO</a>`,
   },
 
@@ -44,21 +53,24 @@ export const PRESETS = {
   'os-road': {
     label: 'Ordnance Survey Road',
     url: 'https://api.os.uk/maps/raster/v1/zxy/Road_3857/{z}/{x}/{y}.png?key={osKey}',
-    maxZoom: 20,
+    maxZoom: 21,
+    maxNativeZoom: 19,
     attribution: `Contains OS data &copy; Crown copyright and database rights ${YEAR}`,
     requiresOsKey: true,
   },
   'os-light': {
     label: 'Ordnance Survey Light',
     url: 'https://api.os.uk/maps/raster/v1/zxy/Light_3857/{z}/{x}/{y}.png?key={osKey}',
-    maxZoom: 20,
+    maxZoom: 21,
+    maxNativeZoom: 19,
     attribution: `Contains OS data &copy; Crown copyright and database rights ${YEAR}`,
     requiresOsKey: true,
   },
   'os-outdoor': {
     label: 'Ordnance Survey Outdoor',
     url: 'https://api.os.uk/maps/raster/v1/zxy/Outdoor_3857/{z}/{x}/{y}.png?key={osKey}',
-    maxZoom: 20,
+    maxZoom: 21,
+    maxNativeZoom: 19,
     attribution: `Contains OS data &copy; Crown copyright and database rights ${YEAR}`,
     requiresOsKey: true,
   },
@@ -67,7 +79,8 @@ export const PRESETS = {
   osm: {
     label: 'OpenStreetMap (volunteer servers)',
     url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-    maxZoom: 19,
+    maxZoom: 21,
+    maxNativeZoom: 19,
     attribution: OSM_ATTRIBUTION,
   },
 
@@ -120,12 +133,20 @@ export function resolveMapConfig(env = process.env) {
 
   const url = customUrl || preset.url.replace('{osKey}', encodeURIComponent(osKey));
 
+  const maxNativeZoom = num(env.CCTV_MAP_TILE_MAX_NATIVE_ZOOM, preset.maxNativeZoom ?? null);
+  // Never let the map stop short of the imagery that exists.
+  const maxZoom = Math.max(
+    num(env.CCTV_MAP_TILE_MAX_ZOOM, preset.maxZoom),
+    maxNativeZoom || 0,
+  );
+
   return {
     name: customUrl ? 'custom' : name,
     label: customUrl ? 'Custom tile source' : preset.label,
     url: preset.requiresOsKey && !osKey && !customUrl ? '' : url,
     attribution: env.CCTV_MAP_TILE_ATTRIBUTION ?? preset.attribution,
-    maxZoom: num(env.CCTV_MAP_TILE_MAX_ZOOM, preset.maxZoom),
+    maxZoom,
+    maxNativeZoom,
     subdomains: env.CCTV_MAP_TILE_SUBDOMAINS || preset.subdomains || 'abc',
     warnings,
   };

@@ -121,6 +121,7 @@ Everything is optional — the app runs with none of it set:
 | `CCTV_MAP_TILE_URL` | *(unset)* | A tile URL template of your own, e.g. a tile server inside your network. Overrides everything above |
 | `CCTV_MAP_TILE_ATTRIBUTION` | per provider | Attribution text shown in the corner of the map |
 | `CCTV_MAP_TILE_MAX_ZOOM` | per provider | How far the map will zoom in |
+| `CCTV_MAP_TILE_MAX_NATIVE_ZOOM` | per provider | The deepest zoom the provider really has images for. `npm run check` measures this for you |
 
 For example, to share it on a local network with a passcode:
 
@@ -207,6 +208,12 @@ CCTV_MAP_TILE_ATTRIBUTION='Force GIS team' node server.js
 
 If tiles cannot be fetched for any reason the app says so and keeps working —
 only the background imagery is lost.
+
+**If the map goes blank only when you zoom right in**, the app is asking for a
+zoom level your provider has no imagery for. Run `npm run check`: it measures
+how far in the provider actually goes and tells you what to set
+`CCTV_MAP_TILE_MAX_NATIVE_ZOOM` to. Below that level the map stays sharp;
+above it, the last real tile is scaled up rather than a missing one requested.
 
 ### Where the data lives
 

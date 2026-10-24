@@ -90,36 +90,81 @@ if (!config.url && config.name !== 'none') {
 }
 
 /* ------------------------------------------------- 5. live tile test --- */
-if (config.url) {
-  console.log('\nFetching one real map tile');
-  // Zoom 12 over central Manchester: somewhere guaranteed to have imagery.
-  const url = config.url
-    .replace('{z}', '12').replace('{x}', '2017').replace('{y}', '1324')
+/** Slippy-map tile covering a lat/lng at a zoom level. */
+function tileFor(lat, lng, z) {
+  const n = 2 ** z;
+  const rad = (lat * Math.PI) / 180;
+  return {
+    x: Math.floor(((lng + 180) / 360) * n),
+    y: Math.floor(((1 - Math.log(Math.tan(rad) + 1 / Math.cos(rad)) / Math.PI) / 2) * n),
+  };
+}
+
+const tileUrl = (z) => {
+  const { x, y } = tileFor(53.4808, -2.2426, z); // central Manchester
+  return config.url
+    .replace('{z}', z).replace('{x}', x).replace('{y}', y)
     .replace('{s}', 'a').replace('{r}', '');
-  const shown = url.replace(/key=[^&]+/, 'key=<hidden>');
+};
+
+async function fetchTile(z) {
   try {
-    const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
+    const res = await fetch(tileUrl(z), { signal: AbortSignal.timeout(15000) });
     const type = res.headers.get('content-type') || '';
-    if (res.ok && type.startsWith('image/')) {
-      tick(`tile server responded ${res.status}, ${type} — this is working`);
-    } else if (res.status === 401 || res.status === 403) {
-      fail(`tile server rejected the key (${res.status})`,
-        'Check the key is right, and that any referer/IP restriction on it in the ' +
-        'OS Data Hub allows this machine');
-    } else if (res.status === 404) {
-      fail('tile server returned 404 — that map style was not found',
-        'In the OS Data Hub, confirm your project has the *OS Maps API* added. ' +
-        'OS NGD API – Tiles and OS Vector Tile API serve vector tiles, which this app cannot draw');
-    } else if (res.status === 429) {
-      fail('rate limited (429)', 'You have hit the plan limit — check your Data Hub plan');
-    } else {
-      fail(`unexpected response ${res.status} (${type || 'no content type'})`, `Tried: ${shown}`);
-    }
+    return { ok: res.ok && type.startsWith('image/'), status: res.status, type };
   } catch (err) {
-    fail(`could not reach the tile server: ${err.message}`,
+    return { ok: false, status: 0, type: '', error: err.message };
+  }
+}
+
+if (config.url) {
+  console.log('\nFetching real map tiles');
+  const base = await fetchTile(14);
+  if (base.ok) {
+    tick(`tile server responded ${base.status}, ${base.type} — this is working`);
+  } else if (base.status === 401 || base.status === 403) {
+    fail(`tile server rejected the key (${base.status})`,
+      'Check the key is right, and that any referer/IP restriction on it in the ' +
+      'OS Data Hub allows this machine');
+  } else if (base.status === 404) {
+    fail('tile server returned 404 — that map style was not found',
+      'In the OS Data Hub, confirm your project has the *OS Maps API* added. ' +
+      'OS NGD API – Tiles and OS Vector Tile API serve vector tiles, which this app cannot draw');
+  } else if (base.status === 429) {
+    fail('rate limited (429)', 'You have hit the plan limit — check your Data Hub plan');
+  } else if (base.status === 0) {
+    fail(`could not reach the tile server: ${base.error}`,
       'Check this machine can reach the internet, and whether a proxy or firewall ' +
       'is blocking it. The app still works without a background map — set ' +
       'CCTV_MAP_TILES=none to stop trying');
+  } else {
+    fail(`unexpected response ${base.status} (${base.type || 'no content type'})`,
+      `Tried: ${tileUrl(14).replace(/key=[^&]+/, 'key=<hidden>')}`);
+  }
+
+  // How far in does this provider actually have imagery? Asking for a zoom
+  // it does not have is what makes the map look broken when you zoom right in.
+  if (base.ok) {
+    let deepest = 14;
+    for (const z of [16, 17, 18, 19, 20, 21, 22]) {
+      const r = await fetchTile(z);
+      if (!r.ok) break;
+      deepest = z;
+    }
+    const configured = config.maxNativeZoom;
+    console.log(`    deepest zoom with real imagery: ${deepest}`);
+    if (!configured) {
+      warn(`no maxNativeZoom configured — set CCTV_MAP_TILE_MAX_NATIVE_ZOOM=${deepest}`);
+    } else if (configured > deepest) {
+      fail(`configured to request zoom ${configured}, but imagery stops at ${deepest}`,
+        `This is what makes the map fail when you zoom right in. ` +
+        `Put CCTV_MAP_TILE_MAX_NATIVE_ZOOM=${deepest} in your .env`);
+    } else if (configured < deepest) {
+      warn(`imagery goes to zoom ${deepest} but only ${configured} is requested — ` +
+        `set CCTV_MAP_TILE_MAX_NATIVE_ZOOM=${deepest} for a sharper map close in`);
+    } else {
+      tick(`zoom settings match the imagery available (native max ${deepest})`);
+    }
   }
 }
 

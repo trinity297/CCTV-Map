@@ -18,6 +18,9 @@ export function addTileLayer(map) {
   if (!config.url) return null;
   return L.tileLayer(config.url, {
     maxZoom: config.maxZoom || 19,
+    // Past this, Leaflet scales the deepest real tile up instead of asking
+    // for one the provider does not have.
+    maxNativeZoom: config.maxNativeZoom || undefined,
     subdomains: config.subdomains || 'abc',
     attribution: config.attribution || '',
   }).addTo(map);
@@ -93,14 +96,20 @@ export function createMapView({ container, onSelect, onMapClick, onViewportChang
 
   const tiles = addTileLayer(map);
   if (tiles) {
-    let tileErrors = 0;
+    // Only warn when the provider is genuinely unreachable. A handful of
+    // missing tiles - a gap in coverage, one request that timed out - is not
+    // worth an alarming banner while the rest of the map is drawing fine.
+    const banner = () => document.querySelector('#map-offline');
+    let errors = 0;
+    let loaded = 0;
     tiles.on('tileerror', () => {
-      tileErrors += 1;
-      if (tileErrors === 4) document.querySelector('#map-offline')?.removeAttribute('hidden');
+      errors += 1;
+      if (loaded === 0 && errors >= 4) banner()?.removeAttribute('hidden');
     });
     tiles.on('tileload', () => {
-      tileErrors = 0;
-      document.querySelector('#map-offline')?.setAttribute('hidden', '');
+      loaded += 1;
+      errors = 0;
+      banner()?.setAttribute('hidden', '');
     });
   }
 
