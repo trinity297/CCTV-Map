@@ -117,9 +117,14 @@ if (config.url) {
 const source = (name) => (config.supplied[name] ? 'from your settings' : 'default — not set by you');
 console.log(`    max zoom ${config.maxZoom} (${source('CCTV_MAP_TILE_MAX_ZOOM')})` +
   ` · imagery to zoom ${config.maxNativeZoom} (${source('CCTV_MAP_TILE_MAX_NATIVE_ZOOM')})`);
-if (!config.supplied.CCTV_MAP_TILE_MAX_NATIVE_ZOOM) {
-  warn('CCTV_MAP_TILE_MAX_NATIVE_ZOOM is not taking effect.');
-  warn('  If you edited that line in .env, check it does not still start with "#".');
+// Only flag this when there is a line for it in .env that is not working.
+// Never having set it is perfectly normal and not worth a warning.
+if (!config.supplied.CCTV_MAP_TILE_MAX_NATIVE_ZOOM && existsSync(envPath)) {
+  const written = /^\s*#\s*CCTV_MAP_TILE_MAX_NATIVE_ZOOM=/m.test(readFileSync(envPath, 'utf8'));
+  if (written) {
+    warn('CCTV_MAP_TILE_MAX_NATIVE_ZOOM is in your .env but commented out, so it');
+    warn('  has no effect. Delete the "#" at the start of that line to switch it on.');
+  }
 }
 if (!config.url && config.name !== 'none') {
   fail('no tile URL resolved, so the map will have no background',
@@ -137,21 +142,43 @@ function tileFor(lat, lng, z) {
   };
 }
 
-const tileUrl = (z) => {
+const tileUrl = (z, offset = 0) => {
   const { x, y } = tileFor(53.4808, -2.2426, z); // central Manchester
   return config.url
-    .replace('{z}', z).replace('{x}', x).replace('{y}', y)
+    .replace('{z}', z).replace('{x}', x + offset).replace('{y}', y)
     .replace('{s}', 'a').replace('{r}', '');
 };
 
-async function fetchTile(z) {
+async function fetchTile(z, offset = 0) {
   try {
-    const res = await fetch(tileUrl(z), { signal: AbortSignal.timeout(15000) });
+    const res = await fetch(tileUrl(z, offset), { signal: AbortSignal.timeout(15000) });
     const type = res.headers.get('content-type') || '';
-    return { ok: res.ok && type.startsWith('image/'), status: res.status, type };
+    const body = res.ok ? Buffer.from(await res.arrayBuffer()) : Buffer.alloc(0);
+    return { ok: res.ok && type.startsWith('image/'), status: res.status, type, body };
   } catch (err) {
-    return { ok: false, status: 0, type: '', error: err.message };
+    return { ok: false, status: 0, type: '', body: Buffer.alloc(0), error: err.message };
   }
+}
+
+/**
+ * Does this zoom hold real map detail?
+ *
+ * Plenty of providers answer past their deepest zoom with a blank 200 rather
+ * than a 404, so status alone would have us request empty tiles and leave the
+ * map looking broken - the very thing this check exists to prevent. Two
+ * neighbouring tiles over a city centre should differ; identical bytes mean a
+ * placeholder is being served.
+ */
+async function hasRealImagery(z) {
+  const here = await fetchTile(z, 0);
+  if (!here.ok) return { ok: false, status: here.status, error: here.error };
+  await pause(350);
+  const next = await fetchTile(z, 1);
+  if (!next.ok) return { ok: false, status: next.status, error: next.error };
+  if (here.body.equals(next.body)) {
+    return { ok: false, blank: true, bytes: here.body.length };
+  }
+  return { ok: true, bytes: here.body.length };
 }
 
 const pause = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -166,15 +193,16 @@ async function findDeepestZoom(from) {
   let deepest = from;
   for (const z of [16, 17, 18, 19, 20, 21, 22]) {
     await pause(350); // do not trip the provider's rate limit
-    let result = await fetchTile(z);
-    if (!result.ok && result.status !== 404) {
+    let result = await hasRealImagery(z);
+    if (!result.ok && !result.blank && result.status !== 404) {
       await pause(1500);
-      result = await fetchTile(z); // one retry before believing a failure
+      result = await hasRealImagery(z); // one retry before believing a failure
     }
     if (result.ok) {
       deepest = z;
       continue;
     }
+    if (result.blank) return { deepest, conclusive: true, blankFrom: z };
     if (result.status === 404) return { deepest, conclusive: true };
     return { deepest, conclusive: false, status: result.status, error: result.error, z };
   }
@@ -232,14 +260,20 @@ if (config.url) {
       warn('  rate limit, wait a minute and run this again before changing anything.');
     } else {
       console.log(`    deepest zoom with real imagery: ${probe.deepest}`);
+      if (probe.blankFrom) {
+        console.log(`    (zoom ${probe.blankFrom} returns blank tiles, not an error — ` +
+          'so it looks available but holds nothing)');
+      }
       if (configured > probe.deepest) {
         fail(`configured to request zoom ${configured}, but imagery stops at ${probe.deepest}`,
           'This is what makes the map fail when you zoom right in. Put ' +
           `CCTV_MAP_TILE_MAX_NATIVE_ZOOM=${probe.deepest} in your .env — as a real line, ` +
           'not one starting with "#"');
       } else if (configured < probe.deepest) {
-        warn(`imagery goes to zoom ${probe.deepest} but only ${configured} is requested — ` +
-          `set CCTV_MAP_TILE_MAX_NATIVE_ZOOM=${probe.deepest} for a sharper map close in`);
+        warn(`imagery appears to go to zoom ${probe.deepest}, but only ${configured} is requested.`);
+        warn(`  Try CCTV_MAP_TILE_MAX_NATIVE_ZOOM=${probe.deepest} for a sharper map close in, then`);
+        warn('  zoom right in and look: some providers answer past their real detail with');
+        warn('  upscaled or empty tiles. If it looks worse, step the number back down.');
       } else {
         tick(`zoom settings match the imagery available (native max ${probe.deepest})`);
       }
