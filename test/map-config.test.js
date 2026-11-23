@@ -172,3 +172,17 @@ test('an explicit tile url is never rewritten with a key', () => {
   });
   assert.equal(config.url, 'https://example.test/{z}/{x}/{y}.png?token=mine');
 });
+
+test('the drawn demo map needs no provider and no network', () => {
+  const config = resolveMapConfig({ CCTV_MAP_TILES: 'demo' });
+  assert.equal(config.renderer, 'demo', 'the browser draws these tiles itself');
+  assert.equal(config.url, '', 'nothing is fetched');
+  assert.deepEqual(config.warnings, []);
+  assert.ok(config.attribution.includes('not real geography'),
+    'it must be clear this is scenery, not a real place');
+});
+
+test('a real provider carries no renderer', () => {
+  assert.equal(resolveMapConfig({}).renderer, null);
+  assert.equal(resolveMapConfig({ CCTV_MAP_TILES: 'osm' }).renderer, null);
+});

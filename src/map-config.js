@@ -107,6 +107,18 @@ export const PRESETS = {
     attribution: OSM_ATTRIBUTION,
   },
 
+  // A street map drawn in the browser. Looks and zooms like a map, needs no
+  // provider, no account and no network - for demonstrating the app where real
+  // imagery is unavailable. It is scenery, not geography.
+  demo: {
+    label: 'Drawn demo map (no network needed)',
+    url: '',
+    renderer: 'demo',
+    maxZoom: 21,
+    maxNativeZoom: 21,
+    attribution: 'Illustrative map — not real geography',
+  },
+
   // Pins and view cones on a plain background. Always works, needs no network.
   none: {
     label: 'No background map',
@@ -197,6 +209,7 @@ export function resolveMapConfig(env = process.env) {
     label: customUrl ? 'Custom tile source' : preset.label,
     url: preset.requiresOsKey && !osKey && !customUrl ? '' : url,
     attribution: env.CCTV_MAP_TILE_ATTRIBUTION ?? preset.attribution,
+    renderer: customUrl ? null : preset.renderer || null,
     maxZoom,
     maxNativeZoom,
     subdomains: env.CCTV_MAP_TILE_SUBDOMAINS || preset.subdomains || 'abc',

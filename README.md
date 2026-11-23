@@ -102,11 +102,23 @@ machine. **Import** next to the export links loads a colleague's JSON export,
 so you can hand round a worked example. Every module is shared with the real
 app, so the demo cannot drift from it.
 
-If the machine you are demonstrating on blocks map providers, build it without
-a background map — pins, view cones and the coverage check all still work:
+**The map in the standalone build is drawn in the browser**, not fetched from
+anywhere, so it works on a machine with no internet at all and nothing to sign
+up for. It pans and zooms exactly like real mapping — streets, buildings,
+parks, a river — but it is invented scenery, labelled as such on the map, and
+no part of it corresponds to a real place. For showing people how the tool
+behaves that is usually what you want; for a demo against real streets, build
+against a provider you have access to:
 
 ```bash
-CCTV_MAP_TILES=none npm run build:standalone
+CCTV_MAP_TILES=os-road npm run build:standalone
+```
+
+The same drawn map is available to the served app, which is useful when a
+provider is blocked or you are working offline:
+
+```bash
+CCTV_MAP_TILES=demo node server.js
 ```
 
 Treat the file as a prototype for discussion, not somewhere to keep real case
@@ -195,6 +207,7 @@ CCTV_MAP_TILES=carto-positron node server.js
 | `os-road`, `os-light`, `os-outdoor` | **Ordnance Survey.** Needs `CCTV_MAP_OS_API_KEY` |
 | `esri-street`, `esri-imagery` | Esri's public basemaps, no account needed. Check Esri's terms before organisational use |
 | `osm` | OpenStreetMap's own servers. Read the warning below before choosing this |
+| `demo` | A street map **drawn in the browser** — no provider, no account, no network. Looks and zooms like a map; it is scenery, not real geography |
 | `none` | No background at all. Pins and cones on a plain backdrop — works with no internet access whatsoever |
 
 **If you are in a UK police force, use Ordnance Survey.** Forces have access
@@ -345,7 +358,7 @@ before it holds live operational data for a whole department.
 ## Development
 
 ```bash
-npm test          # 68 tests, no dependencies
+npm test          # 70 tests, no dependencies
 npm run check     # verify configuration and the map key
 npm run dev       # restarts on change
 ```
@@ -369,6 +382,7 @@ public/
     geo-core.js        distance and bearing maths, shared with the server
     record-core.js     validation and statuses, shared with the server
     demo-store.js      browser-only store used by the standalone build
+    demo-tiles.js      draws the map itself, for when no provider is available
   vendor/leaflet/      Leaflet 1.9.4 (BSD-2-Clause), bundled
 test/                  geo, records, api, auth
 scripts/

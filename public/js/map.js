@@ -1,4 +1,5 @@
 import { el } from './util.js';
+import { createDemoTileLayer } from './demo-tiles.js';
 import {
   EARTH_RADIUS_M, toRad, toDeg, bearingBetween, distanceMetres,
 } from './geo-core.js';
@@ -19,6 +20,10 @@ function tileConfig() {
 
 export function addTileLayer(map) {
   const config = tileConfig();
+  // The drawn demo map has no URL: its tiles are generated in the browser.
+  if (config.renderer === 'demo') {
+    return createDemoTileLayer({ maxZoom: config.maxZoom }).addTo(map);
+  }
   if (!config.url) return null;
   return L.tileLayer(config.url, {
     maxZoom: config.maxZoom || 19,

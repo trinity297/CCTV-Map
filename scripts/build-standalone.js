@@ -29,6 +29,7 @@ const MODULES = [
   ['public/js/util.js', 'util.js'],
   ['src/csv.js', 'csv.js'],
   ['public/js/demo-store.js', 'demo-store.js'],
+  ['public/js/demo-tiles.js', 'demo-tiles.js'],
   ['public/js/map.js', 'map.js'],
   ['public/js/aim.js', 'aim.js'],
   ['public/js/detail.js', 'detail.js'],
@@ -122,7 +123,10 @@ if (!seedBlock.includes('const examples = [')) {
   throw new Error('Could not find the example records in scripts/seed.js.');
 }
 
-const mapConfig = resolveMapConfig({ CCTV_MAP_TILES: process.env.CCTV_MAP_TILES || '' });
+// The drawn map by default: a demo is usually shown on a machine where real
+// tile providers are blocked, and a blank background undersells the idea.
+// Pass CCTV_MAP_TILES to build against a real provider instead.
+const mapConfig = resolveMapConfig({ CCTV_MAP_TILES: process.env.CCTV_MAP_TILES || 'demo' });
 
 const bootstrap = `
 /* --- standalone bootstrap --------------------------------------------- */
@@ -136,6 +140,7 @@ window.__cctvDemoMap = ${JSON.stringify({
   maxZoom: mapConfig.maxZoom,
   maxNativeZoom: mapConfig.maxNativeZoom,
   subdomains: mapConfig.subdomains,
+  renderer: mapConfig.renderer,
   label: mapConfig.label,
 })};
 seedIfEmpty(DEMO_SEED.map((e) => ({ ...e, operation: 'DEMO' })));
