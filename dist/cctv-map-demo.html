@@ -1397,23 +1397,34 @@ body.has-demo-note .leaflet-bottom { margin-bottom: 42px; }
 </style>
 </head>
 <body>
+<script>
+(function () {
+  var ok = true;
+  try {
+    ok = !!(window.CSS && CSS.supports && CSS.supports('(--probe: 0)'))
+      && ('noModule' in document.createElement('script'))
+      && !!window.Promise && !!document.createElement('dialog').showModal;
+  } catch (e) { ok = false; }
+  if (ok) return;
+  document.addEventListener('DOMContentLoaded', function () {
+    document.body.innerHTML =
+      '<div style="font:16px/1.5 Arial,sans-serif;max-width:34em;margin:12vh auto;padding:0 20px;color:#222">'
+      + '<h1 style="font-size:20px;margin:0 0 10px">This browser is too old for the demo</h1>'
+      + '<p>The CCTV Map demo needs a current browser — Chrome, Edge or Firefox.</p>'
+      + '<p>Nothing is wrong with the file. Try opening it in a different browser: '
+      + 'right-click the file, choose <b>Open with</b>, and pick one of those.</p>'
+      + '</div>';
+  });
+})();
+</script>
 <div class="demo-note" id="demo-note">
-  <strong>Demo build.</strong> Everything you add is stored in this browser only —
-  nothing is sent anywhere, and closing the tab keeps it. Use
+  <strong>Demo build 2026-11-23 11:29.</strong> Everything you add is stored in this browser
+  only — nothing is sent anywhere, and closing the tab keeps it. Use
   <strong>JSON</strong> above the list to take your records with you.
   <button type="button" class="demo-note__close" aria-label="Hide this notice">&times;</button>
 </div>
 
-<div id="login" class="gate" hidden>
-  <form class="gate__card" id="login-form">
-    <h1>CCTV Map</h1>
-    <p>This log is passcode protected.</p>
-    <label for="login-passcode">Passcode</label>
-    <input id="login-passcode" type="password" autocomplete="current-password" required>
-    <p class="gate__error" id="login-error" hidden></p>
-    <button type="submit" class="btn btn--primary">Sign in</button>
-  </form>
-</div>
+<!-- sign-in removed: the standalone build has no server -->
 
 <div id="app" hidden>
   <header class="topbar">
@@ -3826,6 +3837,9 @@ async function boot() {
 
 function showLogin() {
   const gate = $('#login');
+  // The standalone build strips the sign-in markup: there is no server to
+  // authenticate against, so there must be no gate to get stuck behind.
+  if (!gate) return;
   gate.hidden = false;
   $('#login-form').addEventListener('submit', async (event) => {
     event.preventDefault();

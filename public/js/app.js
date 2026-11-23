@@ -32,6 +32,9 @@ async function boot() {
 
 function showLogin() {
   const gate = $('#login');
+  // The standalone build strips the sign-in markup: there is no server to
+  // authenticate against, so there must be no gate to get stuck behind.
+  if (!gate) return;
   gate.hidden = false;
   $('#login-form').addEventListener('submit', async (event) => {
     event.preventDefault();

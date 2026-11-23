@@ -78,6 +78,8 @@ function assertNoCollisions(parts) {
 
 /* ----------------------------------------------------------- the pieces */
 
+const BUILD_STAMP = new Date().toISOString().slice(0, 16).replace('T', ' ');
+
 const parts = MODULES.map(([path, name]) => ({ name, code: flatten(read(path), name) }));
 assertNoCollisions(parts);
 
@@ -276,13 +278,52 @@ for (const [label, chunk] of [['Leaflet CSS', leafletCss], ['app CSS', appCss],
   }
 }
 
+/* --- strip what cannot work without a server --------------------------- */
+// There is nothing to authenticate against, so the sign-in gate must not even
+// be present: if anything ever unhides it, the demo becomes unusable with a
+// passcode nobody can know.
+const loginStart = html.indexOf('<div id="login"');
+const loginEnd = html.indexOf('</div>', html.indexOf('</form>', loginStart)) + '</div>'.length;
+if (loginStart < 0 || loginEnd < loginStart) {
+  throw new Error('Could not find the sign-in markup to remove from the standalone build.');
+}
+html = html.slice(0, loginStart) + '<!-- sign-in removed: the standalone build has no server -->'
+  + html.slice(loginEnd);
+if (html.includes('id="login"')) {
+  throw new Error('The sign-in markup is still present — refusing to ship a demo that can lock itself.');
+}
+
 // Leaflet asks for marker images relative to the page; this build uses none.
-html = inline(html, '<body>', '<body>\n' + DEMO_BANNER());
+// A demo gets opened on whatever machine is to hand. If the browser is too
+// old for this app, say so in plain terms rather than showing a page that
+// looks broken: a classic script, since an old browser ignores modules.
+const BROWSER_CHECK = `<script>
+(function () {
+  var ok = true;
+  try {
+    ok = !!(window.CSS && CSS.supports && CSS.supports('(--probe: 0)'))
+      && ('noModule' in document.createElement('script'))
+      && !!window.Promise && !!document.createElement('dialog').showModal;
+  } catch (e) { ok = false; }
+  if (ok) return;
+  document.addEventListener('DOMContentLoaded', function () {
+    document.body.innerHTML =
+      '<div style="font:16px/1.5 Arial,sans-serif;max-width:34em;margin:12vh auto;padding:0 20px;color:#222">'
+      + '<h1 style="font-size:20px;margin:0 0 10px">This browser is too old for the demo</h1>'
+      + '<p>The CCTV Map demo needs a current browser — Chrome, Edge or Firefox.</p>'
+      + '<p>Nothing is wrong with the file. Try opening it in a different browser: '
+      + 'right-click the file, choose <b>Open with</b>, and pick one of those.</p>'
+      + '</div>';
+  });
+})();
+</script>`;
+
+html = inline(html, '<body>', '<body>\n' + BROWSER_CHECK + '\n' + DEMO_BANNER());
 
 function DEMO_BANNER() {
   return `<div class="demo-note" id="demo-note">
-  <strong>Demo build.</strong> Everything you add is stored in this browser only —
-  nothing is sent anywhere, and closing the tab keeps it. Use
+  <strong>Demo build ${BUILD_STAMP}.</strong> Everything you add is stored in this browser
+  only — nothing is sent anywhere, and closing the tab keeps it. Use
   <strong>JSON</strong> above the list to take your records with you.
   <button type="button" class="demo-note__close" aria-label="Hide this notice">&times;</button>
 </div>`;

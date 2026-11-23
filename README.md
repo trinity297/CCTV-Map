@@ -121,6 +121,10 @@ provider is blocked or you are working offline:
 CCTV_MAP_TILES=demo node server.js
 ```
 
+The banner along the bottom carries the date it was built, so you can tell at a
+glance which copy someone has open. If the machine's browser is too old to run
+it, the file says so plainly rather than showing a half-rendered page.
+
 Treat the file as a prototype for discussion, not somewhere to keep real case
 data: browser storage is easily lost, and anyone with the file has whatever is
 in it.
@@ -326,8 +330,9 @@ grep CCTV_MAP_PASSCODE .env
 To turn sign-in off, delete that line (or put a `#` at the start) and restart.
 `npm run check` reports whether a passcode is in force, without printing it.
 
-The standalone single-file build never asks for a passcode — it has no server
-to check one against.
+The standalone single-file build never asks for a passcode — the sign-in markup
+is removed from it entirely, because there is no server to check one against
+and a gate nobody could open would make the demo useless.
 
 ### Where the data lives
 
