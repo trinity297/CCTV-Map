@@ -90,6 +90,28 @@ if (secret && key && secret === key) {
     '       node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"');
 }
 
+/* --------------------------------------------------- 3d. the passcode -- */
+console.log('\nAccess');
+const PLACEHOLDER = 'pick-something-long';
+const passcode = process.env.CCTV_MAP_PASSCODE || '';
+if (!passcode) {
+  tick('no passcode — the app opens straight up');
+  warn('Anyone who can reach the port has full access. Fine on your own machine;');
+  warn('  set CCTV_MAP_PASSCODE before putting it on a network.');
+} else {
+  tick(`passcode required — ${passcode.length} characters`); // length only
+  if (passcode === PLACEHOLDER) {
+    fail('the passcode is still the example placeholder',
+      `Your .env has CCTV_MAP_PASSCODE=${PLACEHOLDER}, copied from .env.example. ` +
+      'That is the passcode the sign-in page is asking for.\n' +
+      '     Change it to something of your own, or delete the line to turn the ' +
+      'sign-in off entirely.');
+  } else {
+    console.log('    It is the value of CCTV_MAP_PASSCODE in your .env — open that file to see it.');
+    console.log('    Delete or comment out that line to turn the sign-in off.');
+  }
+}
+
 /* ------------------------------------------- 3c. settings you may lack -- */
 // .env is never touched by `git pull`, so options added since you copied the
 // template are simply absent, and easy to mistake for ones that do not exist.

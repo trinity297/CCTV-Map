@@ -158,7 +158,7 @@ Everything is optional — the app runs with none of it set:
 | `PORT` | `4173` | Port to listen on |
 | `HOST` | `127.0.0.1` | Interface to bind. `127.0.0.1` means *this machine only* |
 | `CCTV_MAP_DB` | `./data/cctv-map.db` | Where the database file lives |
-| `CCTV_MAP_PASSCODE` | *(unset)* | If set, a shared passcode is required to use the app |
+| `CCTV_MAP_PASSCODE` | *(unset)* | If set, a shared passcode is required to use the app. Whatever you set **is** the passcode — there is no default |
 | `CCTV_MAP_SECRET` | random | Signing key for session cookies. Set it to a long random string if you want sign-ins to survive a restart |
 | `CCTV_MAP_TILES` | `carto-voyager` | Which map background to use — see below |
 | `CCTV_MAP_OS_API_KEY` | *(unset)* | Ordnance Survey Data Hub key. Setting it switches the map to OS mapping |
@@ -312,6 +312,22 @@ is limited to open data, which does not reach street level. Switching that
 project to the **Premium** plan — which carries a free monthly allowance —
 unlocks the full zoom range on the same key. Check the licensing suits your
 force before relying on it for real work.
+
+### "This log is passcode protected" — what is the passcode?
+
+Whatever is on the `CCTV_MAP_PASSCODE` line of your `.env`. There is no
+default and no master passcode: the sign-in page only appears at all because
+that line is set, and the only way to find the value is to open the file.
+
+```bash
+grep CCTV_MAP_PASSCODE .env
+```
+
+To turn sign-in off, delete that line (or put a `#` at the start) and restart.
+`npm run check` reports whether a passcode is in force, without printing it.
+
+The standalone single-file build never asks for a passcode — it has no server
+to check one against.
 
 ### Where the data lives
 
