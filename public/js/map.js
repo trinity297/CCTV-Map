@@ -1,6 +1,10 @@
 import { el } from './util.js';
+import {
+  EARTH_RADIUS_M, toRad, toDeg, bearingBetween, distanceMetres,
+} from './geo-core.js';
 
-const EARTH_RADIUS_M = 6371008.8;
+export { bearingBetween, distanceMetres };
+
 const DEFAULT_CENTRE = [54.0, -2.2]; // roughly the middle of the UK
 const VIEW_KEY = 'cctvmap.view';
 
@@ -26,9 +30,6 @@ export function addTileLayer(map) {
   }).addTo(map);
 }
 
-const toRad = (d) => (d * Math.PI) / 180;
-const toDeg = (r) => (r * 180) / Math.PI;
-
 /** Point reached by travelling `distance` metres along `bearing` from a point. */
 export function destination(lat, lng, bearing, distance) {
   const ang = distance / EARTH_RADIUS_M;
@@ -43,26 +44,6 @@ export function destination(lat, lng, bearing, distance) {
     Math.cos(ang) - Math.sin(lat1) * Math.sin(lat2),
   );
   return [toDeg(lat2), ((toDeg(lng2) + 540) % 360) - 180];
-}
-
-/** Compass bearing in degrees from one point to another (0 = north). */
-export function bearingBetween(lat1, lng1, lat2, lng2) {
-  const dLng = toRad(lng2 - lng1);
-  const y = Math.sin(dLng) * Math.cos(toRad(lat2));
-  const x =
-    Math.cos(toRad(lat1)) * Math.sin(toRad(lat2)) -
-    Math.sin(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.cos(dLng);
-  return (toDeg(Math.atan2(y, x)) + 360) % 360;
-}
-
-/** Great-circle distance between two points, in metres. */
-export function distanceMetres(lat1, lng1, lat2, lng2) {
-  const dLat = toRad(lat2 - lat1);
-  const dLng = toRad(lng2 - lng1);
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
-  return 2 * EARTH_RADIUS_M * Math.asin(Math.min(1, Math.sqrt(a)));
 }
 
 /** Polygon outlining what a camera can see: apex at the camera, arc at its range. */

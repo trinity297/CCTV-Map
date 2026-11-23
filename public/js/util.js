@@ -1,3 +1,8 @@
+import { COMPASS_POINTS, compassLabel } from './geo-core.js';
+
+// Re-exported so the rest of the app can keep importing them from here.
+export { COMPASS_POINTS, compassLabel };
+
 export const $ = (sel, root = document) => root.querySelector(sel);
 export const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 
@@ -17,17 +22,6 @@ export function el(tag, props = {}, children = []) {
     node.append(child.nodeType ? child : document.createTextNode(String(child)));
   }
   return node;
-}
-
-export const COMPASS_POINTS = [
-  'N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE',
-  'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW',
-];
-
-export function compassLabel(bearing) {
-  if (bearing == null || Number.isNaN(Number(bearing))) return '';
-  const idx = Math.round((((bearing % 360) + 360) % 360) / 22.5) % 16;
-  return COMPASS_POINTS[idx];
 }
 
 export function directionText(camera) {

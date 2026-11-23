@@ -62,7 +62,7 @@ async function startApp() {
     container: $('#map'),
     onSelect: (id) => {
       const record = state.records.find((r) => r.id === id);
-      if (record) select(record, { open: true });
+      if (record) selectRecord(record, { open: true });
     },
     onViewportChange: () => {
       if (state.filters.mappedOnly && $('#filter-bbox').checked) refresh();
@@ -216,7 +216,7 @@ async function refresh({ fitToResults = false } = {}) {
 
   renderResults($('#results'), payload.records, {
     activeId: state.activeId,
-    onSelect: (record) => select(record, { open: true }),
+    onSelect: (record) => selectRecord(record, { open: true }),
   });
   renderTable($('#records-table'), payload.records, { onSelect: (record) => openRecord(record.id) });
   $('#list-empty').hidden = payload.records.length > 0;
@@ -230,7 +230,7 @@ async function refresh({ fitToResults = false } = {}) {
   $('#export-json').href = `/api/export.json?${query}`;
 }
 
-function select(record, { open = false } = {}) {
+function selectRecord(record, { open = false } = {}) {
   state.activeId = record.id;
   $$('.result').forEach((node) => node.classList.toggle('is-active', node.dataset.id === record.id));
   mapView?.setActive(record.id);

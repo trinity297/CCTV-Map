@@ -648,6 +648,47 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
 .gate__card input { margin-bottom: 14px; }
 .gate__error { color: var(--danger) !important; margin: -8px 0 12px !important; }
 
+/* ------------------------------------------------- standalone demo note */
+/* Only present in the single-file build; harmless in the served app. */
+.demo-note {
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  z-index: 1500;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 14px;
+  padding-bottom: calc(9px + env(safe-area-inset-bottom, 0px));
+  font-size: 12.5px;
+  color: var(--text);
+  background: var(--accent-sf);
+  border-top: 1px solid var(--accent);
+}
+.demo-note strong { font-weight: 650; }
+.demo-note__close {
+  margin-left: auto;
+  flex: none;
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--text-dim);
+  font-size: 19px;
+  line-height: 1;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.demo-note__close:hover { background: var(--surface); color: var(--text); }
+
+/* Keep the bar clear of the map's own furniture. */
+body.has-demo-note .toasts { bottom: 68px; }
+body.has-demo-note .map__legend { bottom: 60px; }
+body.has-demo-note .leaflet-bottom { margin-bottom: 42px; }
+
+@media (max-width: 720px) {
+  .demo-note { font-size: 12px; padding: 8px 10px; }
+}
+
 /* ------------------------------------------------------------ responsive */
 @media (max-width: 960px) {
   .layout { grid-template-columns: 1fr; height: auto; }

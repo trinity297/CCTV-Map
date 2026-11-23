@@ -12,7 +12,8 @@
     "dev": "node --watch server.js",
     "test": "node --test test/*.test.js",
     "seed": "node scripts/seed.js",
-    "check": "node scripts/check-setup.js"
+    "check": "node scripts/check-setup.js",
+    "build:standalone": "node scripts/build-standalone.js"
   },
   "license": "MIT",
   "private": true

@@ -1,7 +1,7 @@
 import { $, el, toLocalInput, fromLocalInput, toast } from './util.js';
 import { createPickerMap } from './map.js';
 import { createAimMap } from './aim.js';
-import { api, ApiError } from './api.js';
+import { api } from './api.js';
 
 let uid = 0;
 const nextId = () => `f${(uid += 1)}`;
@@ -269,7 +269,9 @@ export function openRecordForm({ dialog, record, mapView, onSaved }) {
       toast(isEdit ? 'Record updated.' : 'CCTV record saved.', 'ok');
       onSaved?.(saved);
     } catch (error) {
-      if (error instanceof ApiError && error.fields) {
+      // Matched by shape, not by class: the served app raises ApiError and the
+      // standalone build raises ValidationError, and both carry `fields`.
+      if (error && error.fields) {
         let first = null;
         for (const [name, message] of Object.entries(error.fields)) {
           const input = form.querySelector(`[name="${CSS.escape(name)}"]`);
